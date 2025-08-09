@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "951713836076",
+    "project_id": "candy-crush-saga-6d346",
+    "storage_bucket": "candy-crush-saga-6d346.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:951713836076:android:41572f4016ead8b9863589",
+        "android_client_info": {
+          "package_name": "com.anh.candy"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAhaaNVr2eXxwbFN5f9Aq3IogEE0FGvYp4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
