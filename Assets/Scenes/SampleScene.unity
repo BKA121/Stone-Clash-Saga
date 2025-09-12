@@ -314,6 +314,9 @@ MonoBehaviour:
   candyLayer:
     serializedVersion: 2
     m_Bits: 8
+  blockLayer:
+    serializedVersion: 2
+    m_Bits: 64
   firestoreReader: {fileID: 1734428083}
 --- !u!1 &1734428082
 GameObject:
