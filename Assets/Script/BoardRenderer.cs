@@ -8,16 +8,16 @@ public class BoardRenderer : MonoBehaviour
 {
     public GameObject tilePerfab;
     public GameObject wallPerfab, floorPerfab;
-    public GameObject blockPrefab;
+    public GameObject icePrefab;
     private float distanceTile = 1.05f;
 
     public FirestoreReader firestoreReader;
-    public CandyManager candyManager;
+    public StoneManager stoneManager;
 
     public void RenderBoard(LevelData levelData)
     {
         DrawBoard(levelData.row, levelData.column, levelData.positionBlockList);
-        candyManager.DrawCandy(levelData.row, levelData.column, levelData.positionBlockList, levelData.ruleList);
+        stoneManager.SpawnStone(levelData.row, levelData.column, levelData.positionBlockList, levelData.ruleList);
     }
     private void DrawBoard(int row, int column, List<(int x, int y)> positionBlock)
     {
@@ -54,7 +54,7 @@ public class BoardRenderer : MonoBehaviour
         foreach (var a in positionBlock)
         {
             Vector2 pos = new Vector2(a.x * distanceTile, a.y * distanceTile);
-            Instantiate(blockPrefab, pos, Quaternion.identity);
+            Instantiate(icePrefab, pos, Quaternion.identity);
         }
     }
 }

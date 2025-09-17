@@ -214,6 +214,60 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &671741877
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 671741879}
+  - component: {fileID: 671741878}
+  m_Layer: 0
+  m_Name: StoneManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &671741878
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 671741877}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c6ae7116df5bcb5428900018626c99a1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  redDiamonPrefab: {fileID: 7785411126728902344, guid: ea40582a77c59da408204596063748ac, type: 3}
+  blueDiamonPrefab: {fileID: 6020194133078708878, guid: e0f136366b18a3841b6b93fb7e6a4c97, type: 3}
+  greenDiamonPrefab: {fileID: 4470563859594859605, guid: 280f0ebc8c4f7bb488bb869e65ad1bf5, type: 3}
+  stoneLayer:
+    serializedVersion: 2
+    m_Bits: 8
+  blockLayer:
+    serializedVersion: 2
+    m_Bits: 64
+  firestoreReader: {fileID: 1734428083}
+--- !u!4 &671741879
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 671741877}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 2.762453, y: 0.64690745, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &847069569
 GameObject:
   m_ObjectHideFlags: 0
@@ -307,17 +361,9 @@ MonoBehaviour:
   tilePerfab: {fileID: 2645191774054745978, guid: c03cc1c351ad9f948b29460658af7254, type: 3}
   wallPerfab: {fileID: 6109113783661379361, guid: 2fe38c4872adb6e40a86f36c1b6fad2f, type: 3}
   floorPerfab: {fileID: 1331300981130236871, guid: e7058db4f6000ed4f8f53055ec1b9fd4, type: 3}
-  candyRedPrefab: {fileID: 8247043058130429958, guid: 2cbf4e8da74e87a4796f5067cec8f2e2, type: 3}
-  candyBluePrefab: {fileID: 5422286933936318380, guid: 50898fc778698774f851c1bdeb49d15f, type: 3}
-  candyGreenPrefab: {fileID: 1814218338730454310, guid: f2c08a29215278743991984715e16ade, type: 3}
   blockPrefab: {fileID: 595657816553935334, guid: 5c7fe16a76c80844284a02bc50176192, type: 3}
-  candyLayer:
-    serializedVersion: 2
-    m_Bits: 8
-  blockLayer:
-    serializedVersion: 2
-    m_Bits: 64
   firestoreReader: {fileID: 1734428083}
+  stoneManager: {fileID: 671741878}
 --- !u!1 &1734428082
 GameObject:
   m_ObjectHideFlags: 0
@@ -370,3 +416,4 @@ SceneRoots:
   - {fileID: 1591806728}
   - {fileID: 847069571}
   - {fileID: 1734428084}
+  - {fileID: 671741879}

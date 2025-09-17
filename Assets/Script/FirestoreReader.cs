@@ -46,19 +46,19 @@ public class FirestoreReader : MonoBehaviour
     }
     public async Task<List<string>> LoadRule()
     {
-        var docRef = db.Collection("rules").Document("spawnNormalCandy");
+        var docRef = db.Collection("rules").Document("spawnNormalStone");
         DocumentSnapshot s = await docRef.GetSnapshotAsync();
-        if(s.Exists && s.ContainsField("spawnCandy"))
+        if(s.Exists && s.ContainsField("spawnStone"))
         {
             Dictionary<string, object> ruleData = s.ToDictionary();
-            var candyList = ruleData["spawnCandy"] as List<object>;
-            List<string> spawnCandyList = new List<string>();
-            foreach(object a in candyList)
+            var stoneList = ruleData["spawnStone"] as List<object>;
+            List<string> spawnStoneList = new List<string>();
+            foreach(object a in stoneList)
             {
-                string nameCandy = a.ToString();
-                spawnCandyList.Add(nameCandy);
+                string nameStone = a.ToString();
+                spawnStoneList.Add(nameStone);
             }
-            return spawnCandyList;
+            return spawnStoneList;
         }
         return null;
     }
