@@ -243,16 +243,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c6ae7116df5bcb5428900018626c99a1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  redDiamonPrefab: {fileID: 7785411126728902344, guid: ea40582a77c59da408204596063748ac, type: 3}
-  blueDiamonPrefab: {fileID: 6020194133078708878, guid: e0f136366b18a3841b6b93fb7e6a4c97, type: 3}
-  greenDiamonPrefab: {fileID: 4470563859594859605, guid: 280f0ebc8c4f7bb488bb869e65ad1bf5, type: 3}
-  stoneLayer:
-    serializedVersion: 2
-    m_Bits: 8
-  blockLayer:
-    serializedVersion: 2
-    m_Bits: 64
+  redDiamonPrefab: {fileID: 6262816877892846098, guid: ea40582a77c59da408204596063748ac, type: 3}
+  blueDiamonPrefab: {fileID: 1987557933740156005, guid: e0f136366b18a3841b6b93fb7e6a4c97, type: 3}
+  greenDiamonPrefab: {fileID: 5335196311039696358, guid: 280f0ebc8c4f7bb488bb869e65ad1bf5, type: 3}
+  icePrefab: {fileID: 1401725445626959265, guid: f3a2e70d165ef2541b881e17825ae3cf, type: 3}
   firestoreReader: {fileID: 1734428083}
+  row: 0
+  column: 0
 --- !u!4 &671741879
 Transform:
   m_ObjectHideFlags: 0
@@ -262,7 +259,7 @@ Transform:
   m_GameObject: {fileID: 671741877}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.762453, y: 0.64690745, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -299,6 +296,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   firestoreReader: {fileID: 1734428083}
   boardRenderer: {fileID: 1591806729}
+  stoneManager: {fileID: 671741878}
 --- !u!4 &847069571
 Transform:
   m_ObjectHideFlags: 0
@@ -340,7 +338,7 @@ Transform:
   m_GameObject: {fileID: 1591806726}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.22873583, y: 0.6469027, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -358,10 +356,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0c26ea997e0f4e744b5bbc25b56d8500, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  tilePerfab: {fileID: 2645191774054745978, guid: c03cc1c351ad9f948b29460658af7254, type: 3}
-  wallPerfab: {fileID: 6109113783661379361, guid: 2fe38c4872adb6e40a86f36c1b6fad2f, type: 3}
+  tilePerfab: {fileID: 5176435346997875286, guid: 2ee209ffefe99754c890e428f4e52110, type: 3}
   floorPerfab: {fileID: 1331300981130236871, guid: e7058db4f6000ed4f8f53055ec1b9fd4, type: 3}
-  blockPrefab: {fileID: 595657816553935334, guid: 5c7fe16a76c80844284a02bc50176192, type: 3}
   firestoreReader: {fileID: 1734428083}
   stoneManager: {fileID: 671741878}
 --- !u!1 &1734428082

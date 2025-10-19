@@ -5,13 +5,28 @@ using UnityEngine;
 
 public class StoneManager : MonoBehaviour
 {
-    public GameObject redDiamonPrefab, blueDiamonPrefab, greenDiamonPrefab;
-    [SerializeField] private LayerMask stoneLayer;
-    [SerializeField] private LayerMask blockLayer;
-    private float distanceTile = 1.05f;
-
+    public GameObject redDiamonPrefab, blueDiamonPrefab, greenDiamonPrefab, icePrefab;
     public FirestoreReader firestoreReader;
+    public int row, column;
+    public StoneBehaviour[,] boardStone;
+    private LevelData levalData;
 
+    public void Init(LevelData data)
+    {
+        this.levalData = data;
+        this.row = data.row;
+        this.column = data.column;
+        boardStone = new StoneBehaviour[row, column];
+    }
+
+    public bool IsCellEmpty(int row, int col)
+    {
+        return boardStone[row, col] == null;
+    }
+    public void RegisterStone(StoneBehaviour stone, int row, int col)
+    {
+        boardStone[row, col] = stone;
+    }
     public async Task SpawnStone(int row, int column, List<(int x, int y)> positionBlockList, List<string> ruleList)
     {
         foreach (string rule in ruleList)
@@ -19,100 +34,69 @@ public class StoneManager : MonoBehaviour
             switch (rule)
             {
                 case "spawnNormalStone":
-                    List<string> stoneList = await firestoreReader.LoadRule();
+                    List<StoneType> stoneList = await firestoreReader.LoadRule();
                     if (stoneList != null)
                     {
-                        StartCoroutine(SpawnUntilTopRowFull(row, column, positionBlockList, stoneList));
+                        SpawnStoneForNewGame(row, column, positionBlockList, stoneList);
                     }
                     break;
             }
         }
     }
-    private GameObject GetStonePrefabByName(string nameStone)
+    public GameObject GetStonePrefabByName(StoneType type)
     {
-        switch (nameStone)
+        switch (type)
         {
-            case "red": return redDiamonPrefab;
-            case "blue": return blueDiamonPrefab;
-            case "green": return greenDiamonPrefab;
+            case StoneType.Red: return redDiamonPrefab;
+            case StoneType.Blue: return blueDiamonPrefab;
+            case StoneType.Green: return greenDiamonPrefab;
             default: return null;
         }
     }
-    private IEnumerator SpawnUntilTopRowFull(int row, int column, List<(int x, int y)> positionBlockList, List<string> stoneList)
+    public void SpawnStoneForNewGame(int row, int column, List<(int x, int y)> positionBlockList, List<StoneType> stoneList)
     {
-        while (!CheckFullBoard(row, column))
+        foreach (var pos in positionBlockList)
         {
-            while (true)
+            Vector2 posIce = new Vector2(pos.x, pos.y);
+            GameObject ice = Instantiate(icePrefab, posIce, Quaternion.identity);
+            boardStone[pos.y, pos.x] = ice.GetComponent<IceBehaviour>();
+        }
+
+        for (int i = 0; i < row; i++)
+        {
+            for (int j = 0; j < column; j++)
             {
-                bool anySpawned = false;
-
-                for (int i = 0; i < column; i++)
+                if (boardStone[i, j] != null) continue;
+                List<StoneType> availableStone = new List<StoneType>(stoneList);
+                StoneType type = StoneType.Red;
+                while (availableStone.Count > 0)
                 {
-                    int j = row - 1;
-                    Vector2 positionStone = new Vector2(i * distanceTile, j * distanceTile);
-
-                    // Kiem tra o trong
-                    if (!Physics2D.OverlapCircle(positionStone, 0.45f, stoneLayer))
+                    int index = Random.Range(0, availableStone.Count);
+                    type = availableStone[index];
+                    if (!CheckStone(i, j, type))
                     {
-                        string nameStone = stoneList[UnityEngine.Random.Range(0, stoneList.Count)].ToString();
-                        GameObject stonePrefab = GetStonePrefabByName(nameStone);
-
-                        if (stonePrefab != null)
-                        {
-                            Instantiate(stonePrefab, positionStone, Quaternion.identity);
-                            anySpawned = true;
-                        }
+                        availableStone.RemoveAt(index);
                     }
+                    else break;
                 }
-
-                if (!anySpawned)
+                GameObject stonePrefab = GetStonePrefabByName(type);
+                Vector2 positionStone = new Vector2(j, i);
+                if (stonePrefab != null)
                 {
-                    break;
+                    GameObject stone = Instantiate(stonePrefab, positionStone, Quaternion.identity);
+                    boardStone[i, j] = stone.GetComponent<StoneBehaviour>();
                 }
-
-                yield return new WaitForSeconds(0.29f);
-            }
-
-            if (!CheckFullBoard(row, column))
-            {
-                foreach (var pos in positionBlockList)
-                {
-                    SlideStoneLeft(pos.x - 1, pos.y);
-                }
-                yield return new WaitForSeconds(0.23f);
             }
         }
     }
-    private bool CheckFullBoard(int row, int column)
+    public bool CheckStone(int i, int j, StoneType type)
     {
-        bool check = true;
-        for (int i = 0; i < column; i++)
-        {
-            for (int j = 0; j < row; j++)
-            {
-                Vector2 pos = new Vector2(i * distanceTile, j * distanceTile);
-                Collider2D candy = Physics2D.OverlapCircle(pos, 0.45f, stoneLayer);
-                Collider2D block = Physics2D.OverlapCircle(pos, 0.45f, blockLayer);
-                if (candy == null && block == null)
-                {
-                    check = false;
-                    return check;
-                }
-            }
-        }
-        return check;
-    }
-    private void SlideStoneLeft(int x, int y)
-    {
-        Vector2 stoneLeftPos = new Vector2(x * distanceTile, y * distanceTile);
-        Collider2D stoneLeft = Physics2D.OverlapCircle(stoneLeftPos, 0.45f, stoneLayer);
-
-        if (stoneLeft == null) return;
-
-        Vector2 targetPos = new Vector2((x + 1) * distanceTile, (y - 1) * distanceTile);
-
-        if (Physics2D.OverlapCircle(targetPos, 0.4f, stoneLayer) != null) return;
-
-        stoneLeft.transform.position = targetPos;
+        if (i < 2 && j < 2) return true;
+        if (j >= 2 && boardStone[i, j - 1].stoneType == type
+                   && boardStone[i, j - 2].stoneType == type) return false;
+        if (i >= 2 && boardStone[i - 1, j].stoneType == type
+                   && boardStone[i - 2, j].stoneType == type) return false;
+        return true;
     }
 }
+

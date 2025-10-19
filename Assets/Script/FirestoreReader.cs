@@ -44,7 +44,7 @@ public class FirestoreReader : MonoBehaviour
         }
         return levelData;
     }
-    public async Task<List<string>> LoadRule()
+    public async Task<List<StoneType>> LoadRule()
     {
         var docRef = db.Collection("rules").Document("spawnNormalStone");
         DocumentSnapshot s = await docRef.GetSnapshotAsync();
@@ -52,11 +52,12 @@ public class FirestoreReader : MonoBehaviour
         {
             Dictionary<string, object> ruleData = s.ToDictionary();
             var stoneList = ruleData["spawnStone"] as List<object>;
-            List<string> spawnStoneList = new List<string>();
+            List<StoneType> spawnStoneList = new List<StoneType>();
             foreach(object a in stoneList)
             {
                 string nameStone = a.ToString();
-                spawnStoneList.Add(nameStone);
+                StoneType type = Enum.Parse<StoneType>(nameStone, true);
+                spawnStoneList.Add(type);
             }
             return spawnStoneList;
         }
