@@ -20,6 +20,7 @@ public class StoneBehaviour : MonoBehaviour
     private Vector2 firstTouchPosition;
     private Vector2 finalTouchPosition;
     private float swipeAngle = 0;
+    public static bool isSwap = false;
 
     public virtual void Start()
     {
@@ -31,11 +32,10 @@ public class StoneBehaviour : MonoBehaviour
     public virtual void Update()
     {
         if (Time.time - spawnTime < 0.06f) return;
-        if (isSettled || isSliding) return;
-        if (Mathf.Abs(rigidbody2D.velocity.y) < 0.05f)
-        {
-            CheckSlideOrSettle();
-        }
+        if (isSettled && Mathf.Abs(rigidbody2D.velocity.y) < 0.05f) return;
+        if (isSettled && Mathf.Abs(rigidbody2D.velocity.y) > 0.5f) UnSettle();
+        if (isSliding) return;
+        if (Mathf.Abs(rigidbody2D.velocity.y) < 0.05f) CheckSlideOrSettle();
     }
 
     public virtual void CheckSlideOrSettle()
@@ -43,19 +43,19 @@ public class StoneBehaviour : MonoBehaviour
         int row = Mathf.RoundToInt(transform.position.y);
         int col = Mathf.RoundToInt(transform.position.x);
 
-        //Kiem tra truot trai
-        if (col > 0 && row > 0 && stoneManager.IsCellEmpty(row - 1, col - 1))
-        {
-            StartCoroutine(SlideToTarget(col - 1, row - 1));
-            return;
-        }
+        ////Kiem tra truot trai
+        //if (col > 0 && row > 0 && stoneManager.IsCellEmpty(row - 1, col - 1))
+        //{
+        //    StartCoroutine(SlideToTarget(col - 1, row - 1));
+        //    return;
+        //}
 
-        //Kiem tra truot phai
-        if (col < stoneManager.column - 1 && row > 0 && stoneManager.IsCellEmpty(row - 1, col + 1))
-        {
-            StartCoroutine(SlideToTarget(col + 1, row - 1));
-            return;
-        }
+        ////Kiem tra truot phai
+        //if (col < stoneManager.column - 1 && row > 0 && stoneManager.IsCellEmpty(row - 1, col + 1))
+        //{
+        //    StartCoroutine(SlideToTarget(col + 1, row - 1));
+        //    return;
+        //}
         Settle(row, col);
     }
 
@@ -63,6 +63,14 @@ public class StoneBehaviour : MonoBehaviour
     {
         isSettled = true;
         stoneManager.RegisterStone(this, row, col);
+    }
+
+    public void UnSettle()
+    {
+        isSettled = false;
+        int row = Mathf.RoundToInt(transform.position.y);
+        int col = Mathf.RoundToInt(transform.position.x);
+        stoneManager.UnRegisterStone(row, col);
     }
 
     private IEnumerator SlideToTarget(int x, int y)
@@ -101,7 +109,9 @@ public class StoneBehaviour : MonoBehaviour
 
     public void SwapStone(float angle)
     {
+        isSwap = true;
         int row = Mathf.RoundToInt(firstTouchPosition.y), col = Mathf.RoundToInt(firstTouchPosition.x);
+        if (stoneManager.boardStone[row, col]==null) return;
         if (stoneManager.boardStone[row, col].stoneType == StoneType.Ice) return;
 
         int dx = 0, dy = 0;
@@ -110,8 +120,9 @@ public class StoneBehaviour : MonoBehaviour
         else if (-135 < angle && angle < -45) dy = -1;
         else dx = -1;
 
-            int newRow = row + dy, newCol = col + dx;
+        int newRow = row + dy, newCol = col + dx;
         if (newRow < 0 || newRow >= stoneManager.row || newCol < 0 || newCol >= stoneManager.column) return;
+        if (stoneManager.boardStone[newRow, newCol] == null) return;
         if (stoneManager.boardStone[newRow, newCol].stoneType == StoneType.Ice) return;
         StoneBehaviour stoneA = stoneManager.boardStone[row, col];
         StoneBehaviour stoneB = stoneManager.boardStone[newRow, newCol];
@@ -146,8 +157,11 @@ public class StoneBehaviour : MonoBehaviour
         stoneA.transform.position = posB;
         stoneB.transform.position = posA;
 
+        yield return new WaitForSeconds(0.15f);
+
         // Bat lai trong luc
         ChangeKinematic(row, col, newRow, newCol, false);
+        isSwap = false;
     }
 
     public void ChangeKinematic(int row, int col, int newRow, int newCol, bool status)
@@ -156,22 +170,24 @@ public class StoneBehaviour : MonoBehaviour
         {
             if (row == newRow)
             {
-                if (stoneManager.boardStone[row + 1, col].rigidbody2D != null)
+                if (stoneManager.boardStone[row + 1, col] != null &&
+                    stoneManager.boardStone[row + 1, col].rigidbody2D != null)
                     stoneManager.boardStone[row + 1, col].rigidbody2D.isKinematic = status;
 
-                if (stoneManager.boardStone[newRow + 1, newCol].rigidbody2D != null)
+                if (stoneManager.boardStone[newRow + 1, newCol] != null &&
+                    stoneManager.boardStone[newRow + 1, newCol].rigidbody2D != null)
                     stoneManager.boardStone[newRow + 1, newCol].rigidbody2D.isKinematic = status;
             }
             else
             {
-                if (stoneManager.boardStone[row + 1, col].rigidbody2D != null)
+                if (row > newRow && stoneManager.boardStone[row + 1, col] != null &&
+                    stoneManager.boardStone[row + 1, col].rigidbody2D != null) 
+                    stoneManager.boardStone[row + 1, col].rigidbody2D.isKinematic = status;
+                else
                 {
-                    if (row > newRow) stoneManager.boardStone[row + 1, col].rigidbody2D.isKinematic = status;
-                    else
-                    {
-                        if (row + 2 <= stoneManager.row - 1 && stoneManager.boardStone[row + 2, col].rigidbody2D != null)
-                            stoneManager.boardStone[row + 2, col].rigidbody2D.isKinematic = status;
-                    }
+                    if (row + 2 <= stoneManager.row - 1 && stoneManager.boardStone[row + 2, col]!=null &&
+                        stoneManager.boardStone[row + 2, col].rigidbody2D != null)
+                        stoneManager.boardStone[row + 2, col].rigidbody2D.isKinematic = status;
                 }
             }
         }
