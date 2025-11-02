@@ -29,21 +29,21 @@ public class BoardRenderer : MonoBehaviour
 
                 if (j == 0)
                 {
-                    Vector2 positionFloor = new Vector2(i, -0.535f);
+                    Vector2 positionFloor = new Vector2(i, -0.538f);
                     GameObject floor = Instantiate(floorPrefab, positionFloor, Quaternion.identity);
                     floor.transform.SetParent(this.transform);
                 }
 
                 if (i == 0)
                 {
-                    Vector2 positionFloor = new Vector2(-0.536f, j);
+                    Vector2 positionFloor = new Vector2(-0.540f, j);
                     GameObject floor = Instantiate(wallPrefab, positionFloor, Quaternion.identity);
                     floor.transform.SetParent(this.transform);
                 }
 
                 if (i == column - 1)
                 {
-                    Vector2 positionFloor = new Vector2(i + 0.536f, j);
+                    Vector2 positionFloor = new Vector2(i + 0.540f, j);
                     GameObject floor = Instantiate(wallPrefab, positionFloor, Quaternion.identity);
                     floor.transform.SetParent(this.transform);
                 }

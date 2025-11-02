@@ -47,15 +47,16 @@ public class StoneBehaviour : MonoBehaviour
 
     public bool CheckStoneBeforeSwap(int row, int col)
     {
+        if (row < 0 || row >= stoneManager.row || col < 0 || col >= stoneManager.column) return false;
         if (stoneManager.boardStone[row, col] == null) return false;
         if (stoneManager.boardStone[row, col].stoneType == StoneType.Ice) return false;
-        if (row < 0 || row >= stoneManager.row || col < 0 || col >= stoneManager.column) return false;
         return true;
     }
 
     public bool CheckStoneAfterSwap(int row, int col, int newRow, int newCol)
     {
         if (stoneManager.CheckMatch3(row, col) || stoneManager.CheckMatch3(newRow, newCol)) return true;
+        if (stoneManager.CheckMatch3IfStoneCenter(row, col) || stoneManager.CheckMatch3IfStoneCenter(newRow, newCol)) return true;
         return false;
     }
 
@@ -106,10 +107,9 @@ public class StoneBehaviour : MonoBehaviour
         stoneA.transform.position = posB;
         stoneB.transform.position = posA;
 
-        yield return new WaitForSeconds(0.05f);
-
         if (!CheckStoneAfterSwap(row, col, newRow, newCol))
         {
+            yield return new WaitForSeconds(0.05f);
             // Doi cho trong mang
             stoneManager.boardStone[row, col] = stoneA;
             stoneManager.boardStone[newRow, newCol] = stoneB;

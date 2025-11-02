@@ -183,6 +183,20 @@ public class StoneManager : MonoBehaviour
         return false;
     }
 
+    // Ham nay giup kiem tra match3 khi stone o trung tam chi dung de kiem tra sau swap
+    public bool CheckMatch3IfStoneCenter(int r, int c)
+    {
+        if (r - 1 >= 0 && r + 1 <= row - 1 && boardStone[r + 1, c] != null && boardStone[r - 1, c] != null &&
+            boardStone[r, c].stoneType == boardStone[r + 1, c].stoneType &&
+            boardStone[r, c].stoneType == boardStone[r - 1, c].stoneType) return true;
+
+        if (c - 1 >= 0 && c + 1 <= column - 1 && boardStone[r, c - 1] != null && boardStone[r, c + 1] != null &&
+            boardStone[r, c].stoneType == boardStone[r, c + 1].stoneType &&
+            boardStone[r, c].stoneType == boardStone[r, c - 1].stoneType) return true;
+
+        return false;
+    }
+
     private IEnumerator DeleteMatch3(int r, int c, string direction)
     {
         int []d = {0, 0, 0, 0, 0, 0 };
