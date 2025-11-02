@@ -208,7 +208,7 @@ Transform:
   m_GameObject: {fileID: 519420028}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.17, y: 2.37, z: -10}
+  m_LocalPosition: {x: 3.5, y: 3.5, z: -10}
   m_LocalScale: {x: 5, y: 5, z: 5}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -243,10 +243,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c6ae7116df5bcb5428900018626c99a1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  redDiamonPrefab: {fileID: 6262816877892846098, guid: ea40582a77c59da408204596063748ac, type: 3}
-  blueDiamonPrefab: {fileID: 1987557933740156005, guid: e0f136366b18a3841b6b93fb7e6a4c97, type: 3}
-  greenDiamonPrefab: {fileID: 5335196311039696358, guid: 280f0ebc8c4f7bb488bb869e65ad1bf5, type: 3}
-  icePrefab: {fileID: 1401725445626959265, guid: f3a2e70d165ef2541b881e17825ae3cf, type: 3}
+  redDiamonPrefab: {fileID: 2599822069866003340, guid: 1895f7d9cf0066045b7ef8034d7ae1a2, type: 3}
+  blueDiamonPrefab: {fileID: 5946407252439660460, guid: ff17712fbba36af48856841a84b87ade, type: 3}
+  greenDiamonPrefab: {fileID: 4670140330057029894, guid: 0e37c5ba4da2352449b87ab86a463a9b, type: 3}
+  icePrefab: {fileID: 4415405595486440499, guid: 845bd794a5897fb478d4319416cf8c3b, type: 3}
   firestoreReader: {fileID: 1734428083}
   row: 0
   column: 0
@@ -356,8 +356,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0c26ea997e0f4e744b5bbc25b56d8500, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  tilePerfab: {fileID: 5176435346997875286, guid: 2ee209ffefe99754c890e428f4e52110, type: 3}
-  floorPerfab: {fileID: 1331300981130236871, guid: e7058db4f6000ed4f8f53055ec1b9fd4, type: 3}
+  boardTilePrefab: {fileID: 1537793804594684298, guid: ee067d9d33a2516458bf6ce9a0cffa87, type: 3}
+  floorPrefab: {fileID: 1331300981130236871, guid: e7058db4f6000ed4f8f53055ec1b9fd4, type: 3}
+  wallPrefab: {fileID: 6626121739340400678, guid: 4a7e5cd88575ea944a542daf4ebf4a2b, type: 3}
   firestoreReader: {fileID: 1734428083}
   stoneManager: {fileID: 671741878}
 --- !u!1 &1734428082

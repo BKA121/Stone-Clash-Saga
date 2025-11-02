@@ -6,8 +6,8 @@ using UnityEngine;
 
 public class BoardRenderer : MonoBehaviour
 {
-    public GameObject tilePerfab;
-    public GameObject floorPerfab;
+    public GameObject boardTilePrefab;
+    public GameObject floorPrefab, wallPrefab;
 
     public FirestoreReader firestoreReader;
     public StoneManager stoneManager;
@@ -24,13 +24,27 @@ public class BoardRenderer : MonoBehaviour
             for (int j = 0; j < row; j++)
             {
                 Vector2 position = new Vector2(i, j);
-                GameObject tile = Instantiate(tilePerfab, position, Quaternion.identity);
+                GameObject tile = Instantiate(boardTilePrefab, position, Quaternion.identity);
                 tile.transform.SetParent(this.transform);
 
                 if (j == 0)
                 {
-                    Vector2 positionFloor = new Vector2(i, -0.5f);
-                    GameObject floor = Instantiate(floorPerfab, positionFloor, Quaternion.identity);
+                    Vector2 positionFloor = new Vector2(i, -0.535f);
+                    GameObject floor = Instantiate(floorPrefab, positionFloor, Quaternion.identity);
+                    floor.transform.SetParent(this.transform);
+                }
+
+                if (i == 0)
+                {
+                    Vector2 positionFloor = new Vector2(-0.536f, j);
+                    GameObject floor = Instantiate(wallPrefab, positionFloor, Quaternion.identity);
+                    floor.transform.SetParent(this.transform);
+                }
+
+                if (i == column - 1)
+                {
+                    Vector2 positionFloor = new Vector2(i + 0.536f, j);
+                    GameObject floor = Instantiate(wallPrefab, positionFloor, Quaternion.identity);
                     floor.transform.SetParent(this.transform);
                 }
             }

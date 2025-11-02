@@ -3,90 +3,28 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.Experimental.GlobalIllumination;
 
 public enum StoneType
 {
-    Red, Blue, Green, Ice
+    Red, Green, Blue, Ice
 }
+
 public class StoneBehaviour : MonoBehaviour
 {
+    private int row, col;
     public StoneType stoneType;
-    private Rigidbody2D rigidbody2D;
     public StoneManager stoneManager;
-    private bool isSettled = false;
-    private bool isSliding = false;
-    private float spawnTime;
+    public bool isDestroy = false;
 
+    public static bool isSwapping = false;
     private Vector2 firstTouchPosition;
     private Vector2 finalTouchPosition;
     private float swipeAngle = 0;
-    public static bool isSwap = false;
 
-    public virtual void Start()
+    public void Start()
     {
-        rigidbody2D = GetComponent<Rigidbody2D>();
         stoneManager = FindObjectOfType<StoneManager>();
-        spawnTime = Time.time;
-    }
-
-    public virtual void Update()
-    {
-        if (Time.time - spawnTime < 0.06f) return;
-        if (isSettled && Mathf.Abs(rigidbody2D.velocity.y) < 0.05f) return;
-        if (isSettled && Mathf.Abs(rigidbody2D.velocity.y) > 0.5f) UnSettle();
-        if (isSliding) return;
-        if (Mathf.Abs(rigidbody2D.velocity.y) < 0.05f) CheckSlideOrSettle();
-    }
-
-    public virtual void CheckSlideOrSettle()
-    {
-        int row = Mathf.RoundToInt(transform.position.y);
-        int col = Mathf.RoundToInt(transform.position.x);
-
-        ////Kiem tra truot trai
-        //if (col > 0 && row > 0 && stoneManager.IsCellEmpty(row - 1, col - 1))
-        //{
-        //    StartCoroutine(SlideToTarget(col - 1, row - 1));
-        //    return;
-        //}
-
-        ////Kiem tra truot phai
-        //if (col < stoneManager.column - 1 && row > 0 && stoneManager.IsCellEmpty(row - 1, col + 1))
-        //{
-        //    StartCoroutine(SlideToTarget(col + 1, row - 1));
-        //    return;
-        //}
-        Settle(row, col);
-    }
-
-    public void Settle(int row, int col)
-    {
-        isSettled = true;
-        stoneManager.RegisterStone(this, row, col);
-    }
-
-    public void UnSettle()
-    {
-        isSettled = false;
-        int row = Mathf.RoundToInt(transform.position.y);
-        int col = Mathf.RoundToInt(transform.position.x);
-        stoneManager.UnRegisterStone(row, col);
-    }
-
-    private IEnumerator SlideToTarget(int x, int y)
-    {
-        isSliding = true;
-        Vector2 targetPos = new Vector2(x, y);
-        while (Vector2.Distance(transform.position, targetPos) > 0.05f)
-        {
-            Vector2 newPos = Vector2.MoveTowards(transform.position, targetPos, Time.deltaTime * 10f);
-            rigidbody2D.MovePosition(newPos);
-            yield return new WaitForFixedUpdate();
-        }
-        rigidbody2D.MovePosition(targetPos);
-        isSliding = false;
-        spawnTime = Time.time;
-        yield return null;
     }
 
     public void OnMouseDown()
@@ -107,12 +45,25 @@ public class StoneBehaviour : MonoBehaviour
         return swipeAngle;
     }
 
+    public bool CheckStoneBeforeSwap(int row, int col)
+    {
+        if (stoneManager.boardStone[row, col] == null) return false;
+        if (stoneManager.boardStone[row, col].stoneType == StoneType.Ice) return false;
+        if (row < 0 || row >= stoneManager.row || col < 0 || col >= stoneManager.column) return false;
+        return true;
+    }
+
+    public bool CheckStoneAfterSwap(int row, int col, int newRow, int newCol)
+    {
+        if (stoneManager.CheckMatch3(row, col) || stoneManager.CheckMatch3(newRow, newCol)) return true;
+        return false;
+    }
+
     public void SwapStone(float angle)
     {
-        isSwap = true;
         int row = Mathf.RoundToInt(firstTouchPosition.y), col = Mathf.RoundToInt(firstTouchPosition.x);
-        if (stoneManager.boardStone[row, col]==null) return;
-        if (stoneManager.boardStone[row, col].stoneType == StoneType.Ice) return;
+
+        if (!CheckStoneBeforeSwap(row, col)) return;
 
         int dx = 0, dy = 0;
         if (-45 <= angle && angle <= 45) dx = 1;
@@ -121,25 +72,23 @@ public class StoneBehaviour : MonoBehaviour
         else dx = -1;
 
         int newRow = row + dy, newCol = col + dx;
-        if (newRow < 0 || newRow >= stoneManager.row || newCol < 0 || newCol >= stoneManager.column) return;
-        if (stoneManager.boardStone[newRow, newCol] == null) return;
-        if (stoneManager.boardStone[newRow, newCol].stoneType == StoneType.Ice) return;
+        if (!CheckStoneBeforeSwap(newRow, newCol)) return;
+
         StoneBehaviour stoneA = stoneManager.boardStone[row, col];
         StoneBehaviour stoneB = stoneManager.boardStone[newRow, newCol];
 
-        // Doi cho trong mang
-        stoneManager.boardStone[row, col] = stoneB;
-        stoneManager.boardStone[newRow, newCol] = stoneA;
-
-        // Tat trong luc cac vien phia tren
-        ChangeKinematic(row, col, newRow, newCol, true);
-
-        // Doi cho hien thi
+        // Doi cho
         StartCoroutine(SmoothSwap(stoneA, stoneB, row, col, newRow, newCol));
     }
 
     private IEnumerator SmoothSwap(StoneBehaviour stoneA, StoneBehaviour stoneB, int row, int col, int newRow, int newCol)
     {
+        isSwapping = true;
+
+        // Doi cho trong mang
+        stoneManager.boardStone[row, col] = stoneB;
+        stoneManager.boardStone[newRow, newCol] = stoneA;
+
         Vector3 posA = stoneA.transform.position;
         Vector3 posB = stoneB.transform.position;
         float duration = 0.2f;
@@ -157,40 +106,33 @@ public class StoneBehaviour : MonoBehaviour
         stoneA.transform.position = posB;
         stoneB.transform.position = posA;
 
-        yield return new WaitForSeconds(0.15f);
+        yield return new WaitForSeconds(0.05f);
 
-        // Bat lai trong luc
-        ChangeKinematic(row, col, newRow, newCol, false);
-        isSwap = false;
-    }
-
-    public void ChangeKinematic(int row, int col, int newRow, int newCol, bool status)
-    {
-        if (row != stoneManager.row - 1)
+        if (!CheckStoneAfterSwap(row, col, newRow, newCol))
         {
-            if (row == newRow)
-            {
-                if (stoneManager.boardStone[row + 1, col] != null &&
-                    stoneManager.boardStone[row + 1, col].rigidbody2D != null)
-                    stoneManager.boardStone[row + 1, col].rigidbody2D.isKinematic = status;
+            // Doi cho trong mang
+            stoneManager.boardStone[row, col] = stoneA;
+            stoneManager.boardStone[newRow, newCol] = stoneB;
 
-                if (stoneManager.boardStone[newRow + 1, newCol] != null &&
-                    stoneManager.boardStone[newRow + 1, newCol].rigidbody2D != null)
-                    stoneManager.boardStone[newRow + 1, newCol].rigidbody2D.isKinematic = status;
-            }
-            else
+            duration = 0.2f;
+            elapsed = 0f;
+            while (elapsed < duration)
             {
-                if (row > newRow && stoneManager.boardStone[row + 1, col] != null &&
-                    stoneManager.boardStone[row + 1, col].rigidbody2D != null) 
-                    stoneManager.boardStone[row + 1, col].rigidbody2D.isKinematic = status;
-                else
-                {
-                    if (row + 2 <= stoneManager.row - 1 && stoneManager.boardStone[row + 2, col]!=null &&
-                        stoneManager.boardStone[row + 2, col].rigidbody2D != null)
-                        stoneManager.boardStone[row + 2, col].rigidbody2D.isKinematic = status;
-                }
+                elapsed += Time.deltaTime;
+                float t = elapsed / duration;
+                stoneA.transform.position = Vector3.Lerp(posB, posA, t);
+                stoneB.transform.position = Vector3.Lerp(posA, posB, t);
+                yield return null;
             }
+
+            stoneA.transform.position = posA;
+            stoneB.transform.position = posB;
         }
+
+        yield return new WaitForSeconds(0.1f);
+
+        isSwapping = false;
+        StoneManager.startFind = true;
     }
 }
 
