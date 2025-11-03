@@ -12,10 +12,8 @@ public enum StoneType
 
 public class StoneBehaviour : MonoBehaviour
 {
-    private int row, col;
     public StoneType stoneType;
     public StoneManager stoneManager;
-    public bool isDestroy = false;
 
     public static bool isSwapping = false;
     private Vector2 firstTouchPosition;
@@ -25,6 +23,29 @@ public class StoneBehaviour : MonoBehaviour
     public void Start()
     {
         stoneManager = FindObjectOfType<StoneManager>();
+    }
+
+    public IEnumerator Fall(int row, int col, int distanceFall)
+    {
+        StoneManager.isBoardDeleteStone = true;
+        // Go dky khoi bang
+        stoneManager.UnRegisterStone(row, col);
+
+        Vector3 targetPos = new Vector3(col, row - distanceFall, 0);
+
+        float speedFall = 0f, acceleration = 0.25f;
+        while(Vector3.Distance(transform.position, targetPos) > 0.01f)
+        {
+            speedFall += acceleration;
+            transform.position = Vector3.MoveTowards(transform.position, targetPos, Time.deltaTime * speedFall);
+            yield return null;
+        }
+        transform.position = targetPos;
+
+        // Dky vao vi tri moi sau khi roi
+        stoneManager.RegisterStone(this, row - distanceFall, col);
+        yield return new WaitForSeconds(0.4f);
+        StoneManager.isBoardDeleteStone = false;
     }
 
     public void OnMouseDown()

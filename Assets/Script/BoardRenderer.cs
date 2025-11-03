@@ -51,3 +51,13 @@ public class BoardRenderer : MonoBehaviour
         }
     }
 }
+
+//Check
+//for (int i = 0; i < row; i++)
+//{
+//    for (int j = 0; j < column; j++)
+//    {
+//        if (boardStone[i, j] == null) Debug.Log("Toa do: " + i + ", " + j + ": null");
+//        else Debug.Log("Toa do: " + i + ", " + j + ": " + boardStone[i, j].stoneType);
+//    }
+//}

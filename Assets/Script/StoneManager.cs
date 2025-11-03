@@ -12,7 +12,7 @@ public class StoneManager : MonoBehaviour
     public StoneBehaviour[,] boardStone;
     private LevelData levalData;
     private bool isBoardReady = false;
-    private bool isBoardDeleteStone = false;
+    public static bool isBoardDeleteStone = false;
     public static bool startFind = false;
     private string directionDeleteMatch = "";
 
@@ -22,12 +22,6 @@ public class StoneManager : MonoBehaviour
         this.row = data.row;
         this.column = data.column;
         boardStone = new StoneBehaviour[row, column];
-    }
-
-    public bool IsCellEmpty(int row, int col)
-    {
-        // Tra ve true neu cell(row, col) rong
-        return boardStone[row, col] == null;
     }
 
     // Dang ky vao board
@@ -129,7 +123,6 @@ public class StoneManager : MonoBehaviour
             startFind = false;
             FindMatch3();
         }
-        return;
     }
 
     public void FindMatch3()
@@ -140,7 +133,7 @@ public class StoneManager : MonoBehaviour
             {
                 if (boardStone[i, j] != null && boardStone[i, j].stoneType != StoneType.Ice)
                 {
-                    if (CheckMatch3(i, j)) StartCoroutine(DeleteMatch3(i, j, directionDeleteMatch));
+                    if (CheckMatch3(i, j)) DeleteMatch3(i, j, directionDeleteMatch);
                 }
             }
         }
@@ -197,7 +190,7 @@ public class StoneManager : MonoBehaviour
         return false;
     }
 
-    private IEnumerator DeleteMatch3(int r, int c, string direction)
+    private void DeleteMatch3(int r, int c, string direction)
     {
         int []d = {0, 0, 0, 0, 0, 0 };
         switch(direction)
@@ -223,25 +216,28 @@ public class StoneManager : MonoBehaviour
                     break;
                 }
         }
-        isBoardDeleteStone = true;
         for (int i=0; i<3; i++)
         {
             Destroy(boardStone[r + d[i], c + d[i + 3]].gameObject);
-            boardStone[r + d[i], c + d[i + 3]].isDestroy = true;
             boardStone[r + d[i], c + d[i + 3]] = null;
         }
-        yield return new WaitForSeconds(0.6f);
-        isBoardDeleteStone = false;
+
         countMatch += 1;
-        //Check
-        //for (int i = 0; i < row; i++)
-        //{
-        //    for (int j = 0; j < column; j++)
-        //    {
-        //        if (boardStone[i, j] == null) Debug.Log("Toa do: " + i + ", " + j + ": null");
-        //        else Debug.Log("Toa do: " + i + ", " + j + ": " + boardStone[i, j].stoneType);
-        //    }
-        //}
+
+        // Roi stone
+        for (int j = 0; j < column; j++)
+        {
+            int countNullCell = 0;
+            for (int i = 0; i < row; i++)
+            {
+                if (boardStone[i, j] == null) countNullCell += 1;
+                else if (boardStone[i, j].stoneType == StoneType.Ice) countNullCell = 0;
+                else if(countNullCell != 0)
+                {
+                    StartCoroutine(boardStone[i, j].Fall(i, j, countNullCell));
+                }
+            }
+        }
     }
 }
 
