@@ -27,13 +27,13 @@ public class StoneBehaviour : MonoBehaviour
 
     public IEnumerator Fall(int row, int col, int distanceFall)
     {
-        StoneManager.isBoardDeleteStone = true;
+        stoneManager.countStoneFall += 1;
         // Go dky khoi bang
         stoneManager.UnRegisterStone(row, col);
 
         Vector3 targetPos = new Vector3(col, row - distanceFall, 0);
 
-        float speedFall = 0f, acceleration = 0.25f;
+        float speedFall = 0f, acceleration = 0.23f;
         while(Vector3.Distance(transform.position, targetPos) > 0.01f)
         {
             speedFall += acceleration;
@@ -42,10 +42,12 @@ public class StoneBehaviour : MonoBehaviour
         }
         transform.position = targetPos;
 
+        // Viet ham slide 
+
         // Dky vao vi tri moi sau khi roi
         stoneManager.RegisterStone(this, row - distanceFall, col);
         yield return new WaitForSeconds(0.4f);
-        StoneManager.isBoardDeleteStone = false;
+        stoneManager.countStoneFall -= 1;
     }
 
     public void OnMouseDown()
@@ -56,6 +58,7 @@ public class StoneBehaviour : MonoBehaviour
     public void OnMouseUp()
     {
         finalTouchPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        if (Vector3.Distance(finalTouchPosition, firstTouchPosition) < 0.3f) return;
         swipeAngle = CaculateAngle();
         SwapStone(swipeAngle);
     }

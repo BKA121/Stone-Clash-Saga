@@ -12,8 +12,8 @@ public class StoneManager : MonoBehaviour
     public StoneBehaviour[,] boardStone;
     private LevelData levalData;
     private bool isBoardReady = false;
-    public static bool isBoardDeleteStone = false;
     public static bool startFind = false;
+    public int countStoneFall = 0;
     private string directionDeleteMatch = "";
 
     public void Init(LevelData data)
@@ -114,7 +114,7 @@ public class StoneManager : MonoBehaviour
 
     private void Update()
     {
-        if (!isBoardReady || isBoardDeleteStone || StoneBehaviour.isSwapping) return;
+        if (!isBoardReady || countStoneFall > 0 || StoneBehaviour.isSwapping) return;
 
         // Chi cho tim match khi vua swap hoac dang con combo
         if (startFind || countMatch > 0)
@@ -122,6 +122,7 @@ public class StoneManager : MonoBehaviour
             countMatch = 0;
             startFind = false;
             FindMatch3();
+            FallStone();
         }
     }
 
@@ -134,6 +135,23 @@ public class StoneManager : MonoBehaviour
                 if (boardStone[i, j] != null && boardStone[i, j].stoneType != StoneType.Ice)
                 {
                     if (CheckMatch3(i, j)) DeleteMatch3(i, j, directionDeleteMatch);
+                }
+            }
+        }
+    }
+
+    public void FallStone()
+    {
+        for (int j = 0; j < column; j++)
+        {
+            int countNullCell = 0;
+            for (int i = 0; i < row; i++)
+            {
+                if (boardStone[i, j] == null) countNullCell += 1;
+                else if (boardStone[i, j].stoneType == StoneType.Ice) countNullCell = 0;
+                else if (countNullCell != 0 && boardStone[i, j].gameObject != null)
+                {
+                    StartCoroutine(boardStone[i, j].Fall(i, j, countNullCell));
                 }
             }
         }
@@ -224,20 +242,6 @@ public class StoneManager : MonoBehaviour
 
         countMatch += 1;
 
-        // Roi stone
-        for (int j = 0; j < column; j++)
-        {
-            int countNullCell = 0;
-            for (int i = 0; i < row; i++)
-            {
-                if (boardStone[i, j] == null) countNullCell += 1;
-                else if (boardStone[i, j].stoneType == StoneType.Ice) countNullCell = 0;
-                else if(countNullCell != 0)
-                {
-                    StartCoroutine(boardStone[i, j].Fall(i, j, countNullCell));
-                }
-            }
-        }
     }
 }
 

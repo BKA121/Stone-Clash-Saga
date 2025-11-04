@@ -95,7 +95,7 @@ CircleCollider2D:
   m_GameObject: {fileID: 2599822069866003340}
   m_Enabled: 1
   m_Density: 1
-  m_Material: {fileID: 6200000, guid: 2b2cda6524ccd724ca7e6eabba970d4d, type: 2}
+  m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -134,7 +134,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   stoneType: 0
-  rigidbody2D: {fileID: 0}
   stoneManager: {fileID: 0}
-  isSettled: 0
-  isDestroy: 0
