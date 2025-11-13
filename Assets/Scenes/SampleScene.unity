@@ -248,8 +248,10 @@ MonoBehaviour:
   greenDiamonPrefab: {fileID: 4670140330057029894, guid: 0e37c5ba4da2352449b87ab86a463a9b, type: 3}
   icePrefab: {fileID: 4415405595486440499, guid: 845bd794a5897fb478d4319416cf8c3b, type: 3}
   firestoreReader: {fileID: 1734428083}
+  stonePoolManager: {fileID: 1993070956}
   row: 0
   column: 0
+  countStoneFall: 0
 --- !u!4 &671741879
 Transform:
   m_ObjectHideFlags: 0
@@ -306,7 +308,7 @@ Transform:
   m_GameObject: {fileID: 847069569}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.22873583, y: 0.6469027, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -399,7 +401,51 @@ Transform:
   m_GameObject: {fileID: 1734428082}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.22873583, y: 0.6469027, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1993070955
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1993070957}
+  - component: {fileID: 1993070956}
+  m_Layer: 0
+  m_Name: StonePoolManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1993070956
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1993070955}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d447257ca8a5834fa07cfa0caa516de, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!4 &1993070957
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1993070955}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -414,3 +460,4 @@ SceneRoots:
   - {fileID: 847069571}
   - {fileID: 1734428084}
   - {fileID: 671741879}
+  - {fileID: 1993070957}

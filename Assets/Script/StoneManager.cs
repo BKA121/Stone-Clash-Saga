@@ -7,6 +7,7 @@ public class StoneManager : MonoBehaviour
 {
     public GameObject redDiamonPrefab, blueDiamonPrefab, greenDiamonPrefab, icePrefab;
     public FirestoreReader firestoreReader;
+    public StonePoolManager stonePoolManager;
     public int row, column;
     private int countMatch = 0;
     public StoneBehaviour[,] boardStone;
@@ -46,6 +47,13 @@ public class StoneManager : MonoBehaviour
                     List<StoneType> stoneList = await firestoreReader.LoadRule();
                     if (stoneList != null)
                     {
+                        Dictionary<StoneType, GameObject> stonePrefab = new Dictionary<StoneType, GameObject>();
+                        foreach(var i in stoneList)
+                        {
+                            stonePrefab[i] = GetStonePrefabByType(i);
+                        }
+                        stonePoolManager.InitPools(stonePrefab, 30);
+
                         SpawnStoneForNewGame(row, column, positionBlockList, stoneList);
                     }
                     break;
@@ -53,7 +61,7 @@ public class StoneManager : MonoBehaviour
         }
     }
     
-    public GameObject GetStonePrefabByName(StoneType type)
+    public GameObject GetStonePrefabByType(StoneType type)
     {
         switch (type)
         {
@@ -71,6 +79,7 @@ public class StoneManager : MonoBehaviour
             Vector2 posIce = new Vector2(pos.x, pos.y);
             GameObject ice = Instantiate(icePrefab, posIce, Quaternion.identity);
             RegisterStone(ice.GetComponent<StoneBehaviour>(), pos.y, pos.x);
+            ice.transform.SetParent(this.transform);
         }
 
         for (int i = 0; i < row; i++)
@@ -90,13 +99,10 @@ public class StoneManager : MonoBehaviour
                     }
                     else break;
                 }
-                GameObject stonePrefab = GetStonePrefabByName(type);
+
                 Vector2 positionStone = new Vector2(j, i);
-                if (stonePrefab != null)
-                {
-                    GameObject stone = Instantiate(stonePrefab, positionStone, Quaternion.identity);
-                    RegisterStone(stone.GetComponent<StoneBehaviour>(), i, j);
-                }
+                GameObject stone = stonePoolManager.GetStoneByType(type, positionStone);
+                RegisterStone(stone.GetComponent<StoneBehaviour>(), i, j);
             }
         }
         isBoardReady = true;
@@ -236,7 +242,8 @@ public class StoneManager : MonoBehaviour
         }
         for (int i=0; i<3; i++)
         {
-            Destroy(boardStone[r + d[i], c + d[i + 3]].gameObject);
+            StoneBehaviour stone = boardStone[r + d[i], c + d[i + 3]];
+            stonePoolManager.ReturnStoneByType(stone.stoneType, stone.gameObject);
             boardStone[r + d[i], c + d[i + 3]] = null;
         }
 
