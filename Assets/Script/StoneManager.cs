@@ -13,6 +13,7 @@ public class StoneManager : MonoBehaviour
     public StoneBehaviour[,] boardStone;
     private LevelData levalData;
     private bool isBoardReady = false;
+    private bool isRefill = false;
     public static bool startFind = false;
     public int countStoneFall = 0;
     private string directionDeleteMatch = "";
@@ -47,12 +48,13 @@ public class StoneManager : MonoBehaviour
                     List<StoneType> stoneList = await firestoreReader.LoadRule();
                     if (stoneList != null)
                     {
+                        // Khoi tao pool
                         Dictionary<StoneType, GameObject> stonePrefab = new Dictionary<StoneType, GameObject>();
                         foreach(var i in stoneList)
                         {
                             stonePrefab[i] = GetStonePrefabByType(i);
                         }
-                        stonePoolManager.InitPools(stonePrefab, 30);
+                        stonePoolManager.InitPools(stonePrefab, 60);
 
                         SpawnStoneForNewGame(row, column, positionBlockList, stoneList);
                     }
@@ -120,6 +122,8 @@ public class StoneManager : MonoBehaviour
 
     private void Update()
     {
+        //if (countStoneFall == 0 && isRefill == true) RefillBoard();
+
         if (!isBoardReady || countStoneFall > 0 || StoneBehaviour.isSwapping) return;
 
         // Chi cho tim match khi vua swap hoac dang con combo
@@ -132,9 +136,36 @@ public class StoneManager : MonoBehaviour
         }
     }
 
+    public void RefillBoard(int countNullCell, int col)
+    {
+        int r = row - 1;
+        while(countNullCell != 0)
+        {
+            Vector2 position = new Vector2(col, r);
+            GameObject stone = stonePoolManager.GetRandomStone(position);
+            RegisterStone(stone.GetComponent<StoneBehaviour>(), r, col);
+            countNullCell -= 1;
+            r -= 1;
+        }
+        //for (int j = 0; j < column; j++)
+        //{
+        //    for (int i = row - 1; i >= 0; i--)
+        //    {
+        //        if (boardStone[i, j] == null)
+        //        {
+        //            Vector2 position = new Vector2(j, i);
+        //            GameObject stone = stonePoolManager.GetRandomStone(position);
+        //            RegisterStone(stone.GetComponent<StoneBehaviour>(), i, j);
+        //        }
+        //        else break;
+        //    }
+        //}
+        //isRefill = false;
+    }
+
     public void FindMatch3()
     {
-        for(int i=0; i<row; i++)
+        for(int i=0; i<9; i++)
         {
             for(int j=0; j<column; j++)
             {
@@ -146,10 +177,35 @@ public class StoneManager : MonoBehaviour
         }
     }
 
+    //public void CheckSlideStone()
+    //{
+    //    for(int j=0; j<column; j++)
+    //    {
+    //        for(int i=8; i>=1; i--)
+    //        {
+    //            if (boardStone[i, j] != null && boardStone[i, j].stoneType != StoneType.Ice)
+    //            {
+    //                if (j <= column - 2 && boardStone[i - 1, j + 1] == null)
+    //                {
+    //                    boardStone[i, j].SlideStone(i, j);
+    //                    break;
+    //                }
+    //                else if (j > 0 && boardStone[i - 1, j - 1] == null)
+    //                {
+    //                    boardStone[i, j].SlideStone(i, j);
+    //                    break;
+    //                }
+    //            }
+    //        }
+    //    }
+    //}
+
     public void FallStone()
     {
+        //isRefill = true;
         for (int j = 0; j < column; j++)
         {
+            // Roi trong mot cot
             int countNullCell = 0;
             for (int i = 0; i < row; i++)
             {
@@ -160,13 +216,14 @@ public class StoneManager : MonoBehaviour
                     StartCoroutine(boardStone[i, j].Fall(i, j, countNullCell));
                 }
             }
+            RefillBoard(countNullCell, j);
         }
     }
 
     // Ham nay kiem tra 4 huong cua stone tai hang r, cot c
     public bool CheckMatch3(int r, int c)
     {
-        if (r + 2 <= row - 1 && boardStone[r + 1, c]!=null && boardStone[r + 2, c]!=null &&
+        if (r + 2 <= 8 && boardStone[r + 1, c]!=null && boardStone[r + 2, c]!=null &&
             boardStone[r, c].stoneType == boardStone[r + 1, c].stoneType &&
             boardStone[r + 1, c].stoneType == boardStone[r + 2, c].stoneType)
         {
@@ -175,8 +232,8 @@ public class StoneManager : MonoBehaviour
         }
 
         else if (c + 2 <= column - 1 && boardStone[r, c + 1] != null && boardStone[r, c + 2] != null &&
-            boardStone[r, c].stoneType == boardStone[r, c+1].stoneType &&
-            boardStone[r, c+1].stoneType == boardStone[r, c + 2].stoneType)
+            boardStone[r, c].stoneType == boardStone[r, c + 1].stoneType &&
+            boardStone[r, c + 1].stoneType == boardStone[r, c + 2].stoneType)
         {
             directionDeleteMatch = "right";
             return true;
