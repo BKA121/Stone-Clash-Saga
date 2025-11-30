@@ -25,16 +25,34 @@ public class StoneBehaviour : MonoBehaviour
         stoneManager = FindObjectOfType<StoneManager>();
     }
 
-    public IEnumerator Fall(int row, int col, int distanceFall)
+    public IEnumerator FallAndSlide(int row, int col, int rowTarget, int colTarget, int distanceFall, bool isSlide)
     {
         stoneManager.countStoneFall += 1;
         // Go dky khoi bang
         stoneManager.UnRegisterStone(row, col);
 
-        Vector3 targetPos = new Vector3(col, row - distanceFall, 0);
+        // Slide
+        if (isSlide == true)
+        {
+            Vector3 positionCur = this.transform.position;
+            Vector3 positionTarget = new Vector3(colTarget, rowTarget, 0);
+            float duration = 0.16f, elapsed = 0f, t = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                t = elapsed / duration;
+                this.transform.position = Vector3.Lerp(positionCur, positionTarget, t);
+                yield return null;
+            }
+            this.transform.position = positionTarget;
+            row = rowTarget; col = colTarget;
+            stoneManager.countStoneSlide -= 1;
+        }
 
-        float speedFall = 0f, acceleration = 0.17f;
-        while(Vector3.Distance(transform.position, targetPos) > 0.01f)
+        // Fall
+        Vector3 targetPos = new Vector3(col, row - distanceFall, 0);
+        float speedFall = 0f, acceleration = 0.24f;
+        while (Vector3.Distance(transform.position, targetPos) > 0.02f)
         {
             speedFall += acceleration;
             transform.position = Vector3.MoveTowards(transform.position, targetPos, Time.deltaTime * speedFall);
@@ -44,29 +62,8 @@ public class StoneBehaviour : MonoBehaviour
 
         // Dky vao vi tri moi sau khi roi
         stoneManager.RegisterStone(this, row - distanceFall, col);
-        yield return new WaitForSeconds(0.4f); // Cho de tranh xoa ngay match tiep theo
+        yield return new WaitForSeconds(0.15f); // Cho de tranh xoa ngay match tiep theo
         stoneManager.countStoneFall -= 1;
-    }
-
-    public void SlideStone(int row, int col)
-    {
-        if (stoneManager.boardStone[row - 1, col + 1] == null) StartCoroutine(Slide(row - 1, col + 1));
-        else if (stoneManager.boardStone[row - 1, col - 1] == null) StartCoroutine(Slide(row - 1, col - 1));
-    }
-
-    public IEnumerator Slide(int rowTarget, int colTarget)
-    {
-        Vector3 positionCur = this.transform.position;
-        Vector3 positionTarget = new Vector3(colTarget, rowTarget, 0);
-        float duration = 0.2f, elapsed = 0f, t = 0f;
-        while(elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            t = elapsed / duration;
-            this.transform.position = Vector3.Lerp(positionCur, positionTarget, t);
-            yield return null;
-        }
-        this.transform.position = positionTarget;
     }
 
     public void OnMouseDown()

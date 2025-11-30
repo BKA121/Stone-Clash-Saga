@@ -13,9 +13,9 @@ public class StoneManager : MonoBehaviour
     public StoneBehaviour[,] boardStone;
     private LevelData levalData;
     private bool isBoardReady = false;
-    private bool isRefill = false;
     public static bool startFind = false;
     public int countStoneFall = 0;
+    public int countStoneSlide = 0;
     private string directionDeleteMatch = "";
 
     public void Init(LevelData data)
@@ -50,7 +50,7 @@ public class StoneManager : MonoBehaviour
                     {
                         // Khoi tao pool
                         Dictionary<StoneType, GameObject> stonePrefab = new Dictionary<StoneType, GameObject>();
-                        foreach(var i in stoneList)
+                        foreach (var i in stoneList)
                         {
                             stonePrefab[i] = GetStonePrefabByType(i);
                         }
@@ -62,7 +62,7 @@ public class StoneManager : MonoBehaviour
             }
         }
     }
-    
+
     public GameObject GetStonePrefabByType(StoneType type)
     {
         switch (type)
@@ -73,7 +73,7 @@ public class StoneManager : MonoBehaviour
             default: return null;
         }
     }
-    
+
     public void SpawnStoneForNewGame(int row, int column, List<(int x, int y)> positionBlockList, List<StoneType> stoneList)
     {
         foreach (var pos in positionBlockList)
@@ -122,24 +122,22 @@ public class StoneManager : MonoBehaviour
 
     private void Update()
     {
-        //if (countStoneFall == 0 && isRefill == true) RefillBoard();
-
         if (!isBoardReady || countStoneFall > 0 || StoneBehaviour.isSwapping) return;
 
         // Chi cho tim match khi vua swap hoac dang con combo
-        if (startFind || countMatch > 0)
+        if (startFind || countMatch > 0 || countStoneSlide > 0)
         {
             countMatch = 0;
             startFind = false;
             FindMatch3();
-            FallStone();
+            FallStoneAndSlide();
         }
     }
 
     public void RefillBoard(int countNullCell, int col)
     {
         int r = row - 1;
-        while(countNullCell != 0)
+        while (countNullCell != 0)
         {
             Vector2 position = new Vector2(col, r);
             GameObject stone = stonePoolManager.GetRandomStone(position);
@@ -147,27 +145,13 @@ public class StoneManager : MonoBehaviour
             countNullCell -= 1;
             r -= 1;
         }
-        //for (int j = 0; j < column; j++)
-        //{
-        //    for (int i = row - 1; i >= 0; i--)
-        //    {
-        //        if (boardStone[i, j] == null)
-        //        {
-        //            Vector2 position = new Vector2(j, i);
-        //            GameObject stone = stonePoolManager.GetRandomStone(position);
-        //            RegisterStone(stone.GetComponent<StoneBehaviour>(), i, j);
-        //        }
-        //        else break;
-        //    }
-        //}
-        //isRefill = false;
     }
 
     public void FindMatch3()
     {
-        for(int i=0; i<9; i++)
+        for (int i = 0; i < 9; i++)
         {
-            for(int j=0; j<column; j++)
+            for (int j = 0; j < column; j++)
             {
                 if (boardStone[i, j] != null && boardStone[i, j].stoneType != StoneType.Ice)
                 {
@@ -177,32 +161,8 @@ public class StoneManager : MonoBehaviour
         }
     }
 
-    //public void CheckSlideStone()
-    //{
-    //    for(int j=0; j<column; j++)
-    //    {
-    //        for(int i=8; i>=1; i--)
-    //        {
-    //            if (boardStone[i, j] != null && boardStone[i, j].stoneType != StoneType.Ice)
-    //            {
-    //                if (j <= column - 2 && boardStone[i - 1, j + 1] == null)
-    //                {
-    //                    boardStone[i, j].SlideStone(i, j);
-    //                    break;
-    //                }
-    //                else if (j > 0 && boardStone[i - 1, j - 1] == null)
-    //                {
-    //                    boardStone[i, j].SlideStone(i, j);
-    //                    break;
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
-
-    public void FallStone()
+    public void FallStoneAndSlide()
     {
-        //isRefill = true;
         for (int j = 0; j < column; j++)
         {
             // Roi trong mot cot
@@ -210,20 +170,33 @@ public class StoneManager : MonoBehaviour
             for (int i = 0; i < row; i++)
             {
                 if (boardStone[i, j] == null) countNullCell += 1;
-                else if (boardStone[i, j].stoneType == StoneType.Ice) countNullCell = 0;
+                else if (boardStone[i, j].stoneType == StoneType.Ice)
+                {
+                    if (countNullCell > 0) // Tuc la ben duoi ice dang co o trong, can stone truot vao
+                    {
+                        countStoneSlide += countNullCell; // Danh dau cac vien can truot
+
+                        // Kiem tra ben trai va phai ice co the truot khong
+                        if (j - 1 >= 0 && boardStone[i, j - 1] != null && boardStone[i, j - 1].stoneType != StoneType.Ice)
+                            StartCoroutine(boardStone[i, j - 1].FallAndSlide(i, j - 1, i - 1, j, countNullCell - 1, true));
+                        else if (j + 1 <= column - 1 && boardStone[i, j + 1] != null && boardStone[i, j + 1].stoneType != StoneType.Ice)
+                            StartCoroutine(boardStone[i, j + 1].FallAndSlide(i, j + 1, i - 1, j, countNullCell - 1, true));
+                    }
+                    countNullCell = 0;
+                }
                 else if (countNullCell != 0 && boardStone[i, j].gameObject != null)
                 {
-                    StartCoroutine(boardStone[i, j].Fall(i, j, countNullCell));
+                    StartCoroutine(boardStone[i, j].FallAndSlide(i, j, 0, 0, countNullCell, false));
                 }
             }
-            RefillBoard(countNullCell, j);
+            if (countNullCell != 0) RefillBoard(countNullCell, j);
         }
     }
 
     // Ham nay kiem tra 4 huong cua stone tai hang r, cot c
     public bool CheckMatch3(int r, int c)
     {
-        if (r + 2 <= 8 && boardStone[r + 1, c]!=null && boardStone[r + 2, c]!=null &&
+        if (r + 2 <= 8 && boardStone[r + 1, c] != null && boardStone[r + 2, c] != null &&
             boardStone[r, c].stoneType == boardStone[r + 1, c].stoneType &&
             boardStone[r + 1, c].stoneType == boardStone[r + 2, c].stoneType)
         {
@@ -273,8 +246,8 @@ public class StoneManager : MonoBehaviour
 
     private void DeleteMatch3(int r, int c, string direction)
     {
-        int []d = {0, 0, 0, 0, 0, 0 };
-        switch(direction)
+        int[] d = { 0, 0, 0, 0, 0, 0 };
+        switch (direction)
         {
             case "up":
                 {
@@ -297,7 +270,7 @@ public class StoneManager : MonoBehaviour
                     break;
                 }
         }
-        for (int i=0; i<3; i++)
+        for (int i = 0; i < 3; i++)
         {
             StoneBehaviour stone = boardStone[r + d[i], c + d[i + 3]];
             stonePoolManager.ReturnStoneByType(stone.stoneType, stone.gameObject);
@@ -308,4 +281,5 @@ public class StoneManager : MonoBehaviour
 
     }
 }
+
 
