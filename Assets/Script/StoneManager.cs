@@ -1,22 +1,32 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+
+public enum MatchType
+{
+    None, Match3, Match4, Match5, TorLShape
+}
 
 public class StoneManager : MonoBehaviour
 {
     public GameObject redDiamonPrefab, blueDiamonPrefab, greenDiamonPrefab, icePrefab;
+
     public FirestoreReader firestoreReader;
     public StonePoolManager stonePoolManager;
-    public int row, column;
-    private int countMatch = 0;
-    public StoneBehaviour[,] boardStone;
     private LevelData levalData;
-    private bool isBoardReady = false;
+    private PathCaculator pathCaculator;
+    public StoneBehaviour[,] boardStone;
+
+    public int row, column;
+    public int countMatch = 0;
+    public int countStoneDestroy = 0;
     public static bool startFind = false;
-    public int countStoneFall = 0;
-    public int countStoneSlide = 0;
-    private string directionDeleteMatch = "";
+    public bool isProcessing = false;
+    public int countStoneFallOrSlide = 0;
 
     public void Init(LevelData data)
     {
@@ -24,6 +34,7 @@ public class StoneManager : MonoBehaviour
         this.row = data.row;
         this.column = data.column;
         boardStone = new StoneBehaviour[row, column];
+        pathCaculator = new PathCaculator(boardStone, row, column);
     }
 
     // Dang ky vao board
@@ -107,7 +118,6 @@ public class StoneManager : MonoBehaviour
                 RegisterStone(stone.GetComponent<StoneBehaviour>(), i, j);
             }
         }
-        isBoardReady = true;
     }
 
     public bool PreventInitialMatch3(int i, int j, StoneType type)
@@ -120,20 +130,246 @@ public class StoneManager : MonoBehaviour
         return true;
     }
 
-    private void Update()
+    public void Update()
     {
-        if (!isBoardReady || countStoneFall > 0 || StoneBehaviour.isSwapping) return;
+        if (isProcessing) return;
 
-        // Chi cho tim match khi vua swap hoac dang con combo
-        if (startFind || countMatch > 0 || countStoneSlide > 0)
+        if (startFind) StartCoroutine(BoardHandling());
+    }
+
+    public IEnumerator BoardHandling()
+    {
+        isProcessing = true; 
+        do
         {
-            countMatch = 0;
-            startFind = false;
-            FindMatch3();
-            FallStoneAndSlide();
+            // Tim tat ca match
+            List<MatchGroup> matches = FindAllMatches();
+            countMatch = matches.Count;
+            if (countMatch == 0) break;
+
+            // Xu ly toan bo match
+            ProcessMatches(matches);
+
+            while (countStoneDestroy > 0)
+            {
+                yield return null;
+            }
+
+            StartCoroutine(FallStoneAndSlide());
+
+            while (countStoneFallOrSlide > 0)
+            {
+                yield return null;
+            }
+
+        } while (countMatch > 0);
+
+        isProcessing = false;
+        startFind = false;
+    }
+
+    public MatchType GetMatchType(int length, bool isHorizontal)
+    {
+        if (length >= 5) return MatchType.Match5;
+        if (length == 4) return MatchType.Match4;
+        if (length == 3) return MatchType.Match3;
+        return MatchType.None;
+    }
+
+    public List<MatchGroup> FindAllMatches()
+    {
+        var allMatches = new List<MatchGroup>();
+        var stonesInTempMatches = new HashSet<StoneBehaviour>();
+
+        // Match Ngang
+        for (int r = 0; r < row; r++)
+        {
+            for (int c = 0; c < column; c++)
+            {
+                if (boardStone[r, c] == null || boardStone[r, c].stoneType == StoneType.Ice) continue;
+
+                StoneBehaviour curStone = boardStone[r, c];
+                StoneType type = curStone.stoneType;
+                List<StoneBehaviour> horizontalMatch = new List<StoneBehaviour> {curStone};
+
+                // Đếm chuỗi liên tiếp
+                for (int k = c + 1; k < column; k++)
+                {
+                    if (boardStone[r, k] != null && boardStone[r, k].stoneType == type)
+                    {
+                        horizontalMatch.Add(boardStone[r, k]);
+                    }
+                    else break;
+                }
+
+                if (horizontalMatch.Count >= 3)
+                {
+                    // Viên đá đầu tiên là ứng cử viên cho viên đặc biệt
+                    allMatches.Add(new MatchGroup(horizontalMatch, GetMatchType(horizontalMatch.Count, true)));
+                    // Cập nhật vị trí c để bỏ qua các viên đã được tính
+                    c += horizontalMatch.Count - 1;
+                }
+            }
+        }
+
+        // Match Doc
+        for (int c = 0; c < column; c++)
+        {
+            for (int r = 0; r < row; r++)
+            {
+                if (boardStone[r, c] == null || boardStone[r, c].stoneType == StoneType.Ice) continue;
+
+                StoneBehaviour curStone = boardStone[r, c];
+                StoneType type = curStone.stoneType;
+                List<StoneBehaviour> verticalMatch = new List<StoneBehaviour> {curStone};
+
+                for (int k = r + 1; k < row; k++)
+                {
+                    if (boardStone[k, c] != null && boardStone[k, c].stoneType == type)
+                    {
+                        verticalMatch.Add(boardStone[k, c]);
+                    }
+                    else break;
+                }
+
+                if (verticalMatch.Count >= 3)
+                {
+                    allMatches.Add(new MatchGroup(verticalMatch, GetMatchType(verticalMatch.Count, false)));
+                    r += verticalMatch.Count - 1;
+                }
+            }
+        }
+
+        // Tim phan giao nhau de tao match T/L
+        HashSet<StoneBehaviour> mergedStones = new HashSet<StoneBehaviour>();
+        for (int i = 0; i < allMatches.Count; i++)
+        {
+            var group1 = allMatches[i];
+            if (group1.MatchType == MatchType.Match5) continue;
+            for (int j = i + 1; j < allMatches.Count; j++)
+            {
+                var group2 = allMatches[j];
+
+                if (group2.MatchType == MatchType.Match5) continue;
+
+                // Tìm viên đá giao điểm
+                var intersection = group1.MatchedStones.Intersect(group2.MatchedStones);
+                StoneBehaviour intersectionStone = intersection.FirstOrDefault();
+
+                if (intersectionStone != null)
+                {
+                    // Hop thanh 1 match T hoac L
+                    mergedStones.UnionWith(group1.MatchedStones);
+                    mergedStones.UnionWith(group2.MatchedStones);
+
+                    // Xoa hai nhom match cu
+                    allMatches.RemoveAt(j);
+                    allMatches.RemoveAt(i);
+                    i--;
+
+                    // Thêm MatchGroup mới đã hợp nhất (luôn là Wrapped/Bomb)
+                    allMatches.Add(new MatchGroup(mergedStones, MatchType.TorLShape));
+
+                    // Chỉ cần xử lý 1 lần cho giao điểm này và tiếp tục vòng lặp
+                    mergedStones.Clear();
+                    break;
+                }
+            }
+        }
+        return allMatches;
+    }
+
+    public void ProcessMatches(List<MatchGroup> allMatches)
+    {
+        var processedStones = new HashSet<StoneBehaviour>();
+
+        foreach (var match in allMatches)
+        {
+            //if (match.MatchType != MatchType.Match3)
+            //{
+            //    // --- Tạo viên đặc biệt ---
+            //    //StoneBehaviour specialStoneSpot = match.SpecialStoneCandidate;
+
+            //    // Nếu viên này chưa bị xử lý trong một nhóm đặc biệt khác (chỉ xảy ra với phức tạp > T/L)
+            //    //if (processedStones.Contains(specialStoneSpot)) continue;
+
+            //    //StoneType newType = ConvertMatchTypeToSpecialStone(match.MatchType);
+
+            //    // Giả định StoneBehaviour có hàm chuyển đổi loại (ConvertType) hoặc tạo/thay thế
+            //    // Ở đây, ta dùng cách đơn giản là hủy và tạo lại (hoặc gọi hàm chuyển đổi)
+
+            //    // 1. Hủy viên cũ tại chỗ
+            //    //UnRegisterStone(specialStoneSpot.Row, specialStoneSpot.Col);
+            //    //stonePoolManager.ReturnStoneByType(specialStoneSpot.stoneType, specialStoneSpot.gameObject);
+
+            //    // 2. Spawn viên đặc biệt mới
+            //    //Vector2 positionStone = new Vector2(specialStoneSpot.Col, specialStoneSpot.Row);
+            //    //GameObject newStoneObj = stonePoolManager.GetStoneByType(newType, positionStone);
+            //    //StoneBehaviour newSpecialStone = newStoneObj.GetComponent<StoneBehaviour>();
+            //    //newSpecialStone.Row = specialStoneSpot.Row; // Cập nhật hàng, cột
+            //    //newSpecialStone.Col = specialStoneSpot.Col;
+            //    //RegisterStone(newSpecialStone, specialStoneSpot.Row, specialStoneSpot.Col);
+
+            //    //processedStones.Add(newSpecialStone); // Đánh dấu viên mới
+
+            //    // 3. Xóa các viên đá còn lại trong nhóm match
+            //    foreach (var stone in match.MatchedStones)
+            //    {
+            //        //if (stone != specialStoneSpot && !processedStones.Contains(stone))
+            //        //{
+            //            StartCoroutine(DestroyAndReturnToPool(stone));
+            //            processedStones.Add(stone);
+            //            countMatch++;
+            //        //}
+            //    }
+            //}
+            //else // Match 3 binh thuong
+            //{
+                foreach (var stone in match.MatchedStones)
+                {
+                    if (!processedStones.Contains(stone))
+                    {
+                        StartCoroutine(DestroyAndReturnToPool(stone));
+                        processedStones.Add(stone);
+                    }
+                }
+            //}
         }
     }
 
+    public IEnumerator DestroyAndReturnToPool(StoneBehaviour stone)
+    {
+        countStoneDestroy++;
+        // Đảm bảo StoneBehaviour có thuộc tính Row và Col được cập nhật
+        int r = (int)stone.transform.position.y;
+        int c = (int)stone.transform.position.x;
+        StoneType type = stone.stoneType;
+
+        UnRegisterStone(r, c); // Xóa khỏi mảng boardStone
+        stonePoolManager.ReturnStoneByType(type, stone.gameObject); // Trả về Pool
+
+        // **Bước 1: Kích hoạt Hiệu ứng nổ**
+        // Giả định stone.PlayDestroyEffect() đã được cài đặt trong StoneBehaviour
+        // stone.PlayDestroyEffect(); 
+
+        // Chờ đợi animation nổ/hủy hoàn thành (ví dụ: 0.2 giây)
+        yield return null;
+       
+
+        countStoneDestroy--;
+    }
+
+    public IEnumerator FallStoneAndSlide()
+    {
+        var moveAllPathOfStone = pathCaculator.GetMovePathOfStones();
+
+        foreach (var movePathOfStone in moveAllPathOfStone)
+        {
+            StartCoroutine(movePathOfStone.stone.FallAndSlide(movePathOfStone.movePath));
+            yield return new WaitForSeconds(0.02f);
+        }
+    }
+    
     public void RefillBoard(int countNullCell, int col)
     {
         int r = row - 1;
@@ -147,139 +383,93 @@ public class StoneManager : MonoBehaviour
         }
     }
 
-    public void FindMatch3()
-    {
-        for (int i = 0; i < 9; i++)
-        {
-            for (int j = 0; j < column; j++)
-            {
-                if (boardStone[i, j] != null && boardStone[i, j].stoneType != StoneType.Ice)
-                {
-                    if (CheckMatch3(i, j)) DeleteMatch3(i, j, directionDeleteMatch);
-                }
-            }
-        }
-    }
+    //// Ham nay kiem tra 4 huong cua stone tai hang r, cot c
+    //public bool CheckMatch3(int r, int c)
+    //{
+    //    if (r + 2 <= 8 && boardStone[r + 1, c] != null && boardStone[r + 2, c] != null &&
+    //        boardStone[r, c].stoneType == boardStone[r + 1, c].stoneType &&
+    //        boardStone[r + 1, c].stoneType == boardStone[r + 2, c].stoneType)
+    //    {
+    //        directionDeleteMatch = "up";
+    //        return true;
+    //    }
 
-    public void FallStoneAndSlide()
-    {
-        for (int j = 0; j < column; j++)
-        {
-            // Roi trong mot cot
-            int countNullCell = 0;
-            for (int i = 0; i < row; i++)
-            {
-                if (boardStone[i, j] == null) countNullCell += 1;
-                else if (boardStone[i, j].stoneType == StoneType.Ice)
-                {
-                    if (countNullCell > 0) // Tuc la ben duoi ice dang co o trong, can stone truot vao
-                    {
-                        countStoneSlide += countNullCell; // Danh dau cac vien can truot
+    //    else if (c + 2 <= column - 1 && boardStone[r, c + 1] != null && boardStone[r, c + 2] != null &&
+    //        boardStone[r, c].stoneType == boardStone[r, c + 1].stoneType &&
+    //        boardStone[r, c + 1].stoneType == boardStone[r, c + 2].stoneType)
+    //    {
+    //        directionDeleteMatch = "right";
+    //        return true;
+    //    }
 
-                        // Kiem tra ben trai va phai ice co the truot khong
-                        if (j - 1 >= 0 && boardStone[i, j - 1] != null && boardStone[i, j - 1].stoneType != StoneType.Ice)
-                            StartCoroutine(boardStone[i, j - 1].FallAndSlide(i, j - 1, i - 1, j, countNullCell - 1, true));
-                        else if (j + 1 <= column - 1 && boardStone[i, j + 1] != null && boardStone[i, j + 1].stoneType != StoneType.Ice)
-                            StartCoroutine(boardStone[i, j + 1].FallAndSlide(i, j + 1, i - 1, j, countNullCell - 1, true));
-                    }
-                    countNullCell = 0;
-                }
-                else if (countNullCell != 0 && boardStone[i, j].gameObject != null)
-                {
-                    StartCoroutine(boardStone[i, j].FallAndSlide(i, j, 0, 0, countNullCell, false));
-                }
-            }
-            if (countNullCell != 0) RefillBoard(countNullCell, j);
-        }
-    }
+    //    else if (r - 2 >= 0 && boardStone[r - 1, c] != null && boardStone[r - 2, c] != null &&
+    //        boardStone[r, c].stoneType == boardStone[r - 1, c].stoneType &&
+    //        boardStone[r - 1, c].stoneType == boardStone[r - 2, c].stoneType)
+    //    {
+    //        directionDeleteMatch = "down";
+    //        return true;
+    //    }
 
-    // Ham nay kiem tra 4 huong cua stone tai hang r, cot c
-    public bool CheckMatch3(int r, int c)
-    {
-        if (r + 2 <= 8 && boardStone[r + 1, c] != null && boardStone[r + 2, c] != null &&
-            boardStone[r, c].stoneType == boardStone[r + 1, c].stoneType &&
-            boardStone[r + 1, c].stoneType == boardStone[r + 2, c].stoneType)
-        {
-            directionDeleteMatch = "up";
-            return true;
-        }
+    //    else if (c - 2 >= 0 && boardStone[r, c - 1] != null && boardStone[r, c - 2] != null &&
+    //        boardStone[r, c].stoneType == boardStone[r, c - 1].stoneType &&
+    //        boardStone[r, c - 1].stoneType == boardStone[r, c - 2].stoneType)
+    //    {
+    //        directionDeleteMatch = "left";
+    //        return true;
+    //    }
+    //    return false;
+    //}
 
-        else if (c + 2 <= column - 1 && boardStone[r, c + 1] != null && boardStone[r, c + 2] != null &&
-            boardStone[r, c].stoneType == boardStone[r, c + 1].stoneType &&
-            boardStone[r, c + 1].stoneType == boardStone[r, c + 2].stoneType)
-        {
-            directionDeleteMatch = "right";
-            return true;
-        }
+    //// Ham nay giup kiem tra match3 khi stone o trung tam chi dung de kiem tra sau swap
+    //public bool CheckMatch3IfStoneCenter(int r, int c)
+    //{
+    //    if (r - 1 >= 0 && r + 1 <= row - 1 && boardStone[r + 1, c] != null && boardStone[r - 1, c] != null &&
+    //        boardStone[r, c].stoneType == boardStone[r + 1, c].stoneType &&
+    //        boardStone[r, c].stoneType == boardStone[r - 1, c].stoneType) return true;
 
-        else if (r - 2 >= 0 && boardStone[r - 1, c] != null && boardStone[r - 2, c] != null &&
-            boardStone[r, c].stoneType == boardStone[r - 1, c].stoneType &&
-            boardStone[r - 1, c].stoneType == boardStone[r - 2, c].stoneType)
-        {
-            directionDeleteMatch = "down";
-            return true;
-        }
+    //    if (c - 1 >= 0 && c + 1 <= column - 1 && boardStone[r, c - 1] != null && boardStone[r, c + 1] != null &&
+    //        boardStone[r, c].stoneType == boardStone[r, c + 1].stoneType &&
+    //        boardStone[r, c].stoneType == boardStone[r, c - 1].stoneType) return true;
 
-        else if (c - 2 >= 0 && boardStone[r, c - 1] != null && boardStone[r, c - 2] != null &&
-            boardStone[r, c].stoneType == boardStone[r, c - 1].stoneType &&
-            boardStone[r, c - 1].stoneType == boardStone[r, c - 2].stoneType)
-        {
-            directionDeleteMatch = "left";
-            return true;
-        }
-        return false;
-    }
+    //    return false;
+    //}
 
-    // Ham nay giup kiem tra match3 khi stone o trung tam chi dung de kiem tra sau swap
-    public bool CheckMatch3IfStoneCenter(int r, int c)
-    {
-        if (r - 1 >= 0 && r + 1 <= row - 1 && boardStone[r + 1, c] != null && boardStone[r - 1, c] != null &&
-            boardStone[r, c].stoneType == boardStone[r + 1, c].stoneType &&
-            boardStone[r, c].stoneType == boardStone[r - 1, c].stoneType) return true;
+    //private void DeleteMatch3(int r, int c, string direction)
+    //{
+    //    int[] d = { 0, 0, 0, 0, 0, 0 };
+    //    switch (direction)
+    //    {
+    //        case "up":
+    //            {
+    //                d[0] = 0; d[1] = 1; d[2] = 2;
+    //                break;
+    //            }
+    //        case "down":
+    //            {
+    //                d[0] = 0; d[1] = -1; d[2] = -2;
+    //                break;
+    //            }
+    //        case "left":
+    //            {
+    //                d[3] = 0; d[4] = -1; d[5] = -2;
+    //                break;
+    //            }
+    //        case "right":
+    //            {
+    //                d[3] = 0; d[4] = 1; d[5] = 2;
+    //                break;
+    //            }
+    //    }
+    //    for (int i = 0; i < 3; i++)
+    //    {
+    //        StoneBehaviour stone = boardStone[r + d[i], c + d[i + 3]];
+    //        stonePoolManager.ReturnStoneByType(stone.stoneType, stone.gameObject);
+    //        boardStone[r + d[i], c + d[i + 3]] = null;
+    //    }
 
-        if (c - 1 >= 0 && c + 1 <= column - 1 && boardStone[r, c - 1] != null && boardStone[r, c + 1] != null &&
-            boardStone[r, c].stoneType == boardStone[r, c + 1].stoneType &&
-            boardStone[r, c].stoneType == boardStone[r, c - 1].stoneType) return true;
+    //    countMatch += 1;
 
-        return false;
-    }
-
-    private void DeleteMatch3(int r, int c, string direction)
-    {
-        int[] d = { 0, 0, 0, 0, 0, 0 };
-        switch (direction)
-        {
-            case "up":
-                {
-                    d[0] = 0; d[1] = 1; d[2] = 2;
-                    break;
-                }
-            case "down":
-                {
-                    d[0] = 0; d[1] = -1; d[2] = -2;
-                    break;
-                }
-            case "left":
-                {
-                    d[3] = 0; d[4] = -1; d[5] = -2;
-                    break;
-                }
-            case "right":
-                {
-                    d[3] = 0; d[4] = 1; d[5] = 2;
-                    break;
-                }
-        }
-        for (int i = 0; i < 3; i++)
-        {
-            StoneBehaviour stone = boardStone[r + d[i], c + d[i + 3]];
-            stonePoolManager.ReturnStoneByType(stone.stoneType, stone.gameObject);
-            boardStone[r + d[i], c + d[i + 3]] = null;
-        }
-
-        countMatch += 1;
-
-    }
+    //}
 }
 
 

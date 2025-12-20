@@ -25,45 +25,29 @@ public class StoneBehaviour : MonoBehaviour
         stoneManager = FindObjectOfType<StoneManager>();
     }
 
-    public IEnumerator FallAndSlide(int row, int col, int rowTarget, int colTarget, int distanceFall, bool isSlide)
+    public IEnumerator FallAndSlide(List<(int row, int col)> movePath)
     {
-        stoneManager.countStoneFall += 1;
-        // Go dky khoi bang
-        stoneManager.UnRegisterStone(row, col);
-
-        // Slide
-        if (isSlide == true)
+        float maxTime = 3f;
+        float timer = 0f;
+        stoneManager.countStoneFallOrSlide += 1;
+        float speed = 7f;
+        foreach (var pos in movePath)
         {
-            Vector3 positionCur = this.transform.position;
-            Vector3 positionTarget = new Vector3(colTarget, rowTarget, 0);
-            float duration = 0.16f, elapsed = 0f, t = 0f;
-            while (elapsed < duration)
+            Vector3 targetPos = new Vector3(pos.col, pos.row, 0);
+            while (Vector3.Distance(transform.position, targetPos) > 0.05f)
             {
-                elapsed += Time.deltaTime;
-                t = elapsed / duration;
-                this.transform.position = Vector3.Lerp(positionCur, positionTarget, t);
+                timer += Time.deltaTime;
+                if (timer > maxTime)
+                {
+                    Debug.Log("loi roi ne" + stoneType);
+                }
+                transform.position = Vector3.MoveTowards(transform.position, targetPos, Time.deltaTime * speed);
                 yield return null;
             }
-            this.transform.position = positionTarget;
-            row = rowTarget; col = colTarget;
-            stoneManager.countStoneSlide -= 1;
+            transform.position = targetPos;
         }
-
-        // Fall
-        Vector3 targetPos = new Vector3(col, row - distanceFall, 0);
-        float speedFall = 0f, acceleration = 0.24f;
-        while (Vector3.Distance(transform.position, targetPos) > 0.02f)
-        {
-            speedFall += acceleration;
-            transform.position = Vector3.MoveTowards(transform.position, targetPos, Time.deltaTime * speedFall);
-            yield return null;
-        }
-        transform.position = targetPos;
-
-        // Dky vao vi tri moi sau khi roi
-        stoneManager.RegisterStone(this, row - distanceFall, col);
-        yield return new WaitForSeconds(0.15f); // Cho de tranh xoa ngay match tiep theo
-        stoneManager.countStoneFall -= 1;
+        yield return new WaitForSeconds(0.1f);
+        stoneManager.countStoneFallOrSlide -= 1;
     }
 
     public void OnMouseDown()
@@ -93,12 +77,12 @@ public class StoneBehaviour : MonoBehaviour
         return true;
     }
 
-    public bool CheckStoneAfterSwap(int row, int col, int newRow, int newCol)
-    {
-        if (stoneManager.CheckMatch3(row, col) || stoneManager.CheckMatch3(newRow, newCol)) return true;
-        if (stoneManager.CheckMatch3IfStoneCenter(row, col) || stoneManager.CheckMatch3IfStoneCenter(newRow, newCol)) return true;
-        return false;
-    }
+    //public bool CheckStoneAfterSwap(int row, int col, int newRow, int newCol)
+    //{
+    //    if (stoneManager.CheckMatch3(row, col) || stoneManager.CheckMatch3(newRow, newCol)) return true;
+    //    if (stoneManager.CheckMatch3IfStoneCenter(row, col) || stoneManager.CheckMatch3IfStoneCenter(newRow, newCol)) return true;
+    //    return false;
+    //}
 
     public void SwapStone(float angle)
     {
@@ -147,27 +131,27 @@ public class StoneBehaviour : MonoBehaviour
         stoneA.transform.position = posB;
         stoneB.transform.position = posA;
 
-        if (!CheckStoneAfterSwap(row, col, newRow, newCol))
-        {
-            yield return new WaitForSeconds(0.05f);
-            // Doi cho trong mang
-            stoneManager.boardStone[row, col] = stoneA;
-            stoneManager.boardStone[newRow, newCol] = stoneB;
+        //if (!CheckStoneAfterSwap(row, col, newRow, newCol))
+        //{
+        //    yield return new WaitForSeconds(0.05f);
+        //    // Doi cho trong mang
+        //    stoneManager.boardStone[row, col] = stoneA;
+        //    stoneManager.boardStone[newRow, newCol] = stoneB;
 
-            duration = 0.2f;
-            elapsed = 0f;
-            while (elapsed < duration)
-            {
-                elapsed += Time.deltaTime;
-                float t = elapsed / duration;
-                stoneA.transform.position = Vector3.Lerp(posB, posA, t);
-                stoneB.transform.position = Vector3.Lerp(posA, posB, t);
-                yield return null;
-            }
+        //    duration = 0.2f;
+        //    elapsed = 0f;
+        //    while (elapsed < duration)
+        //    {
+        //        elapsed += Time.deltaTime;
+        //        float t = elapsed / duration;
+        //        stoneA.transform.position = Vector3.Lerp(posB, posA, t);
+        //        stoneB.transform.position = Vector3.Lerp(posA, posB, t);
+        //        yield return null;
+        //    }
 
-            stoneA.transform.position = posA;
-            stoneB.transform.position = posB;
-        }
+        //    stoneA.transform.position = posA;
+        //    stoneB.transform.position = posB;
+        //}
 
         yield return new WaitForSeconds(0.1f);
 
