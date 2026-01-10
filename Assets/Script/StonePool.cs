@@ -22,11 +22,14 @@ public class StonePool
         }
     }
 
-    public GameObject GetOutOfPool(Vector2 position)
+    public GameObject GetOutOfPool(Vector2 position, int c, int r)
     {
         GameObject obj = stoneQueue.Dequeue();
         obj.SetActive(true);
-        obj.transform.position = position;
+        obj.GetComponent<RectTransform>().anchoredPosition = position;
+        StoneBehaviour scriptStone = obj.GetComponent<StoneBehaviour>();
+        scriptStone.c = c;
+        scriptStone.r = r;
         return obj;
     }
 

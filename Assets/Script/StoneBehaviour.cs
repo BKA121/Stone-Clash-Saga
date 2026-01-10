@@ -1,24 +1,25 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using Unity.VisualScripting;
+using UnityEngine.EventSystems;
 using UnityEngine;
-using UnityEngine.Experimental.GlobalIllumination;
 
 public enum StoneType
 {
-    Red, Green, Blue, Ice
+    Red, Green, Blue, Purple, Yellow, Ice,
+    BlueMatch4
 }
 
-public class StoneBehaviour : MonoBehaviour
+public class StoneBehaviour : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
 {
     public StoneType stoneType;
     public StoneManager stoneManager;
-
+    public TargetUIHandler uIHandler;
+    public int c; 
+    public int r;
     public static bool isSwapping = false;
     private Vector2 firstTouchPosition;
     private Vector2 finalTouchPosition;
-    private float swipeAngle = 0;
 
     public void Awake()
     {
@@ -27,46 +28,49 @@ public class StoneBehaviour : MonoBehaviour
 
     public IEnumerator FallAndSlide(List<(int row, int col)> movePath)
     {
-        float maxTime = 3f;
-        float timer = 0f;
         stoneManager.countStoneFallOrSlide += 1;
-        float speed = 7f;
+        float speed = 700f;
+        RectTransform rectTransform = GetComponent<RectTransform>();
+
         foreach (var pos in movePath)
         {
-            Vector3 targetPos = new Vector3(pos.col, pos.row, 0);
-            while (Vector3.Distance(transform.position, targetPos) > 0.05f)
+            Vector2 targetPos = stoneManager.UpdatePositionStone(pos.col, pos.row);
+            while (Vector2.Distance(rectTransform.anchoredPosition, targetPos) > 1f)
             {
-                timer += Time.deltaTime;
-                if (timer > maxTime)
-                {
-                    Debug.Log("loi roi ne" + stoneType);
-                }
-                transform.position = Vector3.MoveTowards(transform.position, targetPos, Time.deltaTime * speed);
+                rectTransform.anchoredPosition = Vector2.MoveTowards(
+                    rectTransform.anchoredPosition,
+                    targetPos,
+                    Time.deltaTime * speed
+                );
                 yield return null;
             }
-            transform.position = targetPos;
+            rectTransform.anchoredPosition = targetPos;
+            this.r = pos.row;
+            this.c = pos.col;
         }
+
         yield return new WaitForSeconds(0.1f);
         stoneManager.countStoneFallOrSlide -= 1;
     }
 
-    public void OnMouseDown()
+    public void OnPointerDown(PointerEventData eventData)
     {
-        firstTouchPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        firstTouchPosition = eventData.position;
     }
 
-    public void OnMouseUp()
+    public void OnPointerUp(PointerEventData eventData)
     {
-        finalTouchPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-        if (Vector3.Distance(finalTouchPosition, firstTouchPosition) < 0.3f) return;
-        swipeAngle = CaculateAngle();
+        finalTouchPosition = eventData.position;
+        if (Vector2.Distance(finalTouchPosition, firstTouchPosition) < 30f) return;
+
+        float swipeAngle = CalculateAngle(finalTouchPosition, firstTouchPosition);
         SwapStone(swipeAngle);
     }
 
-    public float CaculateAngle()
+    float CalculateAngle(Vector2 final, Vector2 start)
     {
-        swipeAngle = Mathf.Atan2(finalTouchPosition.y - firstTouchPosition.y, finalTouchPosition.x - firstTouchPosition.x) * 180 / Mathf.PI;
-        return swipeAngle;
+        Vector2 direction = final - start;
+        return Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
     }
 
     public bool CheckStoneBeforeSwap(int row, int col)
@@ -86,9 +90,7 @@ public class StoneBehaviour : MonoBehaviour
 
     public void SwapStone(float angle)
     {
-        int row = Mathf.RoundToInt(firstTouchPosition.y), col = Mathf.RoundToInt(firstTouchPosition.x);
-
-        if (!CheckStoneBeforeSwap(row, col)) return;
+        if (!CheckStoneBeforeSwap(r, c)) return;
 
         int dx = 0, dy = 0;
         if (-45 <= angle && angle <= 45) dx = 1;
@@ -96,26 +98,25 @@ public class StoneBehaviour : MonoBehaviour
         else if (-135 < angle && angle < -45) dy = -1;
         else dx = -1;
 
-        int newRow = row + dy, newCol = col + dx;
+        int newRow = r + dy, newCol = c + dx;
         if (!CheckStoneBeforeSwap(newRow, newCol)) return;
 
-        StoneBehaviour stoneA = stoneManager.boardStone[row, col];
+        StoneBehaviour stoneA = stoneManager.boardStone[r, c];
         StoneBehaviour stoneB = stoneManager.boardStone[newRow, newCol];
 
         // Doi cho
-        StartCoroutine(SmoothSwap(stoneA, stoneB, row, col, newRow, newCol));
+        StartCoroutine(SmoothSwap(stoneA, stoneB, r, c, newRow, newCol));
     }
 
-    private IEnumerator SmoothSwap(StoneBehaviour stoneA, StoneBehaviour stoneB, int row, int col, int newRow, int newCol)
+    private IEnumerator SmoothSwap(StoneBehaviour stoneA, StoneBehaviour stoneB, int rA, int cA, int rB, int cB)
     {
         isSwapping = true;
+        RectTransform rectA = stoneA.GetComponent<RectTransform>();
+        RectTransform rectB = stoneB.GetComponent<RectTransform>();
 
-        // Doi cho trong mang
-        stoneManager.boardStone[row, col] = stoneB;
-        stoneManager.boardStone[newRow, newCol] = stoneA;
+        Vector2 startPosA = rectA.anchoredPosition;
+        Vector2 startPosB = rectB.anchoredPosition;
 
-        Vector3 posA = stoneA.transform.position;
-        Vector3 posB = stoneB.transform.position;
         float duration = 0.2f;
         float elapsed = 0f;
 
@@ -123,38 +124,24 @@ public class StoneBehaviour : MonoBehaviour
         {
             elapsed += Time.deltaTime;
             float t = elapsed / duration;
-            stoneA.transform.position = Vector3.Lerp(posA, posB, t);
-            stoneB.transform.position = Vector3.Lerp(posB, posA, t);
+            float curve = t * t * (3f - 2f * t);
+            rectA.anchoredPosition = Vector2.Lerp(startPosA, startPosB, curve);
+            rectB.anchoredPosition = Vector2.Lerp(startPosB, startPosA, curve);
             yield return null;
         }
 
-        stoneA.transform.position = posB;
-        stoneB.transform.position = posA;
+        rectA.anchoredPosition = startPosB;
+        rectB.anchoredPosition = startPosA;
 
-        //if (!CheckStoneAfterSwap(row, col, newRow, newCol))
-        //{
-        //    yield return new WaitForSeconds(0.05f);
-        //    // Doi cho trong mang
-        //    stoneManager.boardStone[row, col] = stoneA;
-        //    stoneManager.boardStone[newRow, newCol] = stoneB;
+        stoneA.r = rB; stoneA.c = cB;
+        stoneB.r = rA; stoneB.c = cA;
 
-        //    duration = 0.2f;
-        //    elapsed = 0f;
-        //    while (elapsed < duration)
-        //    {
-        //        elapsed += Time.deltaTime;
-        //        float t = elapsed / duration;
-        //        stoneA.transform.position = Vector3.Lerp(posB, posA, t);
-        //        stoneB.transform.position = Vector3.Lerp(posA, posB, t);
-        //        yield return null;
-        //    }
+        stoneManager.boardStone[rB, cB] = stoneA;
+        stoneManager.boardStone[rA, cA] = stoneB;
 
-        //    stoneA.transform.position = posA;
-        //    stoneB.transform.position = posB;
-        //}
+        stoneManager.UpdateMove();
 
         yield return new WaitForSeconds(0.1f);
-
         isSwapping = false;
         StoneManager.startFind = true;
     }

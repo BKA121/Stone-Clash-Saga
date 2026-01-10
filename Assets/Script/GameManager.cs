@@ -8,11 +8,20 @@ public class GameManager : MonoBehaviour
     public FirestoreReader firestoreReader;
     public BoardRenderer boardRenderer;
     public StoneManager stoneManager;
+    public UIManager uiManager;
 
-    private async void Start()
+    private void Awake()
     {
-        LevelData levelData = await firestoreReader.LoadLevelData("level_1");
+        uiManager.ShowLevelMenu();
+    }
+
+    public async void LoadLevel(string levelId)
+    {
+        uiManager.ShowGameplay();
+
+        LevelData levelData = await firestoreReader.LoadLevelData(levelId);
         stoneManager.Init(levelData);
         boardRenderer.RenderBoard(levelData);
     }
+
 }

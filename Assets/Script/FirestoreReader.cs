@@ -25,6 +25,7 @@ public class FirestoreReader : MonoBehaviour
 
             levelData.row = Convert.ToInt32(data["row"]);
             levelData.column = Convert.ToInt32(data["column"]);
+            levelData.moves = Convert.ToInt32(data["moves"]);
 
             var posBlockList = data["position_block"] as List<object>;
             foreach (object pos in posBlockList)
@@ -41,17 +42,25 @@ public class FirestoreReader : MonoBehaviour
                 string rule = ruleObj.ToString();
                 levelData.ruleList.Add(rule);
             }
+
+            if (data.ContainsKey("target") && data["target"] is Dictionary<string, object> targetData)
+            {
+                foreach (var entry in targetData)
+                {
+                    levelData.targetDict.Add(entry.Key, Convert.ToInt32(entry.Value));
+                }
+            }
         }
         return levelData;
     }
-    public async Task<List<StoneType>> LoadRule()
+    public async Task<List<StoneType>> LoadRuleSpawn_x_Type(string typeRule)
     {
-        var docRef = db.Collection("rules").Document("spawnNormalStone");
+        var docRef = db.Collection("rules").Document(typeRule);
         DocumentSnapshot s = await docRef.GetSnapshotAsync();
-        if(s.Exists && s.ContainsField("spawnStone"))
+        if(s.Exists && s.ContainsField("spawnType"))
         {
             Dictionary<string, object> ruleData = s.ToDictionary();
-            var stoneList = ruleData["spawnStone"] as List<object>;
+            var stoneList = ruleData["spawnType"] as List<object>;
             List<StoneType> spawnStoneList = new List<StoneType>();
             foreach(object a in stoneList)
             {

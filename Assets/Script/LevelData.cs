@@ -8,4 +8,6 @@ public class LevelData
     public int column;
     public List<(int x, int y)> positionBlockList = new List<(int x, int y)>();
     public List<string> ruleList = new List<string>();
+    public Dictionary<string, int> targetDict = new Dictionary<string, int>();
+    public int moves;
 }

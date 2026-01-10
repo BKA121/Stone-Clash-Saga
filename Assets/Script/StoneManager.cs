@@ -13,15 +13,22 @@ public enum MatchType
 
 public class StoneManager : MonoBehaviour
 {
-    public GameObject redDiamonPrefab, blueDiamonPrefab, greenDiamonPrefab, icePrefab;
+    public GameObject redDiamonPrefab, blueDiamonPrefab, greenDiamonPrefab,
+                      purpleDiamonPrefab, yellowDiamonPrefab, icePrefab,
+                      blueMatch4;
 
     public FirestoreReader firestoreReader;
     public StonePoolManager stonePoolManager;
     private LevelData levalData;
     private PathCaculator pathCaculator;
     public StoneBehaviour[,] boardStone;
+    public TargetUIHandler uiHandler;
+    public Sprite[] allStoneSprites;
+    public Transform stoneContainer;
 
     public int row, column;
+    public int curMove;
+    public Dictionary<string, int> targetList;
     public int countMatch = 0;
     public int countStoneDestroy = 0;
     public static bool startFind = false;
@@ -33,6 +40,9 @@ public class StoneManager : MonoBehaviour
         this.levalData = data;
         this.row = data.row;
         this.column = data.column;
+        this.targetList = data.targetDict;
+        this.curMove = data.moves;
+        uiHandler.InitializeUI(targetList, allStoneSprites, curMove);
         boardStone = new StoneBehaviour[row, column];
         pathCaculator = new PathCaculator(boardStone, row, column);
     }
@@ -51,26 +61,33 @@ public class StoneManager : MonoBehaviour
 
     public async Task SpawnStone(int row, int column, List<(int x, int y)> positionBlockList, List<string> ruleList)
     {
+        List<StoneType> stoneList = null;
         foreach (string rule in ruleList)
         {
             switch (rule)
             {
-                case "spawnNormalStone":
-                    List<StoneType> stoneList = await firestoreReader.LoadRule();
-                    if (stoneList != null)
-                    {
-                        // Khoi tao pool
-                        Dictionary<StoneType, GameObject> stonePrefab = new Dictionary<StoneType, GameObject>();
-                        foreach (var i in stoneList)
-                        {
-                            stonePrefab[i] = GetStonePrefabByType(i);
-                        }
-                        stonePoolManager.InitPools(stonePrefab, 60);
-
-                        SpawnStoneForNewGame(row, column, positionBlockList, stoneList);
-                    }
+                case "spawn3Type":
+                    stoneList = await firestoreReader.LoadRuleSpawn_x_Type("spawn3Type");
+                    break;
+                case "spawn4Type":
+                    stoneList = await firestoreReader.LoadRuleSpawn_x_Type("spawn4Type");
+                    break;
+                case "spawn5Type":
+                    stoneList = await firestoreReader.LoadRuleSpawn_x_Type("spawn5Type");
                     break;
             }
+        }
+        if (stoneList != null)
+        {
+            // Khoi tao pool
+            Dictionary<StoneType, GameObject> stonePrefab = new Dictionary<StoneType, GameObject>();
+            foreach (var i in stoneList)
+            {
+                stonePrefab[i] = GetStonePrefabByType(i);
+            }
+            stonePoolManager.InitPools(stonePrefab, 60);
+
+            SpawnStoneForNewGame(row, column, positionBlockList, stoneList);
         }
     }
 
@@ -81,41 +98,55 @@ public class StoneManager : MonoBehaviour
             case StoneType.Red: return redDiamonPrefab;
             case StoneType.Blue: return blueDiamonPrefab;
             case StoneType.Green: return greenDiamonPrefab;
+            case StoneType.Purple: return purpleDiamonPrefab;
+            case StoneType.Yellow: return yellowDiamonPrefab;
             default: return null;
         }
+    }
+
+    public Vector2 UpdatePositionStone(int c, int r)
+    {
+        float cellSize = 100f;
+        float offset = cellSize / 2f;
+        float finalX = (c * cellSize) + offset;
+        float finalY = (r * cellSize) + offset;
+        return new Vector2(finalX, finalY);
     }
 
     public void SpawnStoneForNewGame(int row, int column, List<(int x, int y)> positionBlockList, List<StoneType> stoneList)
     {
         foreach (var pos in positionBlockList)
         {
-            Vector2 posIce = new Vector2(pos.x, pos.y);
-            GameObject ice = Instantiate(icePrefab, posIce, Quaternion.identity);
-            RegisterStone(ice.GetComponent<StoneBehaviour>(), pos.y, pos.x);
-            ice.transform.SetParent(this.transform);
+            Vector2 posIce = UpdatePositionStone(pos.x, pos.y);
+            GameObject ice = Instantiate(icePrefab, stoneContainer);
+            ice.GetComponent<RectTransform>().anchoredPosition = posIce;
+            StoneBehaviour stone = ice.GetComponent<StoneBehaviour>();
+            stone.c = pos.x;
+            stone.r = pos.y;
+            RegisterStone(stone, pos.y, pos.x);
+
         }
 
-        for (int i = 0; i < row; i++)
+        for (int r = 0; r < row; r++)
         {
-            for (int j = 0; j < column; j++)
+            for (int c = 0; c < column; c++)
             {
-                if (boardStone[i, j] != null) continue;
+                if (boardStone[r, c] != null) continue;
                 List<StoneType> availableStone = new List<StoneType>(stoneList);
                 StoneType type = StoneType.Red;
                 while (availableStone.Count > 0)
                 {
                     int index = Random.Range(0, availableStone.Count);
                     type = availableStone[index];
-                    if (!PreventInitialMatch3(i, j, type))
+                    if (!PreventInitialMatch3(r, c, type))
                     {
                         availableStone.RemoveAt(index);
                     }
                     else break;
                 }
-
-                Vector2 positionStone = new Vector2(j, i);
-                GameObject stone = stonePoolManager.GetStoneByType(type, positionStone);
-                RegisterStone(stone.GetComponent<StoneBehaviour>(), i, j);
+                Vector2 position = UpdatePositionStone(c, r);
+                GameObject stone = stonePoolManager.GetStoneByType(type, position, c, r);
+                RegisterStone(stone.GetComponent<StoneBehaviour>(), r, c);
             }
         }
     }
@@ -157,6 +188,8 @@ public class StoneManager : MonoBehaviour
 
             StartCoroutine(FallStoneAndSlide());
 
+            RefillBoard();
+
             while (countStoneFallOrSlide > 0)
             {
                 yield return null;
@@ -182,7 +215,7 @@ public class StoneManager : MonoBehaviour
         var stonesInTempMatches = new HashSet<StoneBehaviour>();
 
         // Match Ngang
-        for (int r = 0; r < row; r++)
+        for (int r = 0; r < 9; r++)
         {
             for (int c = 0; c < column; c++)
             {
@@ -215,7 +248,7 @@ public class StoneManager : MonoBehaviour
         // Match Doc
         for (int c = 0; c < column; c++)
         {
-            for (int r = 0; r < row; r++)
+            for (int r = 0; r < 9; r++)
             {
                 if (boardStone[r, c] == null || boardStone[r, c].stoneType == StoneType.Ice) continue;
 
@@ -223,7 +256,7 @@ public class StoneManager : MonoBehaviour
                 StoneType type = curStone.stoneType;
                 List<StoneBehaviour> verticalMatch = new List<StoneBehaviour> {curStone};
 
-                for (int k = r + 1; k < row; k++)
+                for (int k = r + 1; k < 9; k++)
                 {
                     if (boardStone[k, c] != null && boardStone[k, c].stoneType == type)
                     {
@@ -337,15 +370,96 @@ public class StoneManager : MonoBehaviour
         }
     }
 
+    public void UpdateTargetStone(StoneBehaviour stone)
+    {
+        string typeName = stone.stoneType.ToString();
+        if (targetList.ContainsKey(typeName))
+        {
+            if (targetList[typeName] > 0)
+            {
+                targetList[typeName] -= 1;
+                uiHandler.UpdateCountTargetStoneUI(typeName, targetList[typeName]);
+                if (CheckAllTargetsComplete())
+                {
+                    WinGame();
+                }
+            }
+        }
+    }
+
+    public void UpdateMove()
+    {
+        if (curMove > 0)
+        {
+            curMove--;
+            uiHandler.UpdateMovesUI(curMove);
+        }
+
+        if (curMove <= 0)
+        {
+            Debug.Log("Out of moves!");
+        }
+    }
+
+    private void WinGame()
+    {
+        Debug.Log("CHÚC MỪNG! BẠN ĐÃ HOÀN THÀNH CẤP ĐỘ.");
+
+        // Cách 1: Dừng thời gian hệ thống (Game đứng yên)
+        Time.timeScale = 0;
+
+        // Cách 2: Hiển thị Panel thông báo thắng (Khuyên dùng)
+        // winPanel.SetActive(true); 
+
+        // Cách 3: Chuyển sang Scene mới hoặc Load lại
+        // SceneManager.LoadScene("WinScene");
+    }
+
+    private bool CheckAllTargetsComplete()
+    {
+        foreach (var target in targetList)
+        {
+            if (target.Value > 0)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public void DestroyBlockIce(int r, int c)
+    {
+        // Định nghĩa 4 hướng di chuyển: Phải, Trái, Dưới, Trên
+        int[] dr = { 0, 0, 1, -1 };
+        int[] dc = { 1, -1, 0, 0 };
+
+        for (int i = 0; i < 4; i++)
+        {
+            int nr = r + dr[i];
+            int nc = c + dc[i];
+
+            // Kiểm tra biên (Dùng biến row/column thay vì số cứng như 9)
+            if (nr >= 0 && nr < 9 && nc >= 0 && nc < column)
+            {
+                var targetStone = boardStone[nr, nc];
+
+                if (targetStone != null && targetStone.stoneType == StoneType.Ice)
+                {
+                    Destroy(targetStone.gameObject);
+                    boardStone[nr, nc] = null; // Cực kỳ quan trọng để tránh lỗi logic sau này
+                }
+            }
+        }
+    }
+
     public IEnumerator DestroyAndReturnToPool(StoneBehaviour stone)
     {
         countStoneDestroy++;
+        UpdateTargetStone(stone);
         // Đảm bảo StoneBehaviour có thuộc tính Row và Col được cập nhật
-        int r = (int)stone.transform.position.y;
-        int c = (int)stone.transform.position.x;
         StoneType type = stone.stoneType;
-
-        UnRegisterStone(r, c); // Xóa khỏi mảng boardStone
+        DestroyBlockIce(stone.r, stone.c);
+        UnRegisterStone(stone.r, stone.c); // Xóa khỏi mảng boardStone
         stonePoolManager.ReturnStoneByType(type, stone.gameObject); // Trả về Pool
 
         // **Bước 1: Kích hoạt Hiệu ứng nổ**
@@ -366,20 +480,21 @@ public class StoneManager : MonoBehaviour
         foreach (var movePathOfStone in moveAllPathOfStone)
         {
             StartCoroutine(movePathOfStone.stone.FallAndSlide(movePathOfStone.movePath));
-            yield return new WaitForSeconds(0.02f);
+            yield return null;
         }
+        
     }
     
-    public void RefillBoard(int countNullCell, int col)
+    public void RefillBoard()
     {
-        int r = row - 1;
-        while (countNullCell != 0)
+        for(int c=0; c<column; c++)
         {
-            Vector2 position = new Vector2(col, r);
-            GameObject stone = stonePoolManager.GetRandomStone(position);
-            RegisterStone(stone.GetComponent<StoneBehaviour>(), r, col);
-            countNullCell -= 1;
-            r -= 1;
+            for(int r=row-1; r>=0; r--)
+            {
+                if (boardStone[r, c] != null) break;
+                GameObject stone = stonePoolManager.GetRandomStone(c, r);
+                RegisterStone(stone.GetComponent<StoneBehaviour>(), r, c);
+            }
         }
     }
 
