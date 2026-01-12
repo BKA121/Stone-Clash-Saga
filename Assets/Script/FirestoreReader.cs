@@ -53,7 +53,7 @@ public class FirestoreReader : MonoBehaviour
         }
         return levelData;
     }
-    public async Task<List<StoneType>> LoadRuleSpawn_x_Type(string typeRule)
+    public async Task<List<StoneType>> LoadRuleSpawn_x_NormalType(string typeRule)
     {
         var docRef = db.Collection("rules").Document(typeRule);
         DocumentSnapshot s = await docRef.GetSnapshotAsync();
@@ -63,6 +63,26 @@ public class FirestoreReader : MonoBehaviour
             var stoneList = ruleData["spawnType"] as List<object>;
             List<StoneType> spawnStoneList = new List<StoneType>();
             foreach(object a in stoneList)
+            {
+                string nameStone = a.ToString();
+                StoneType type = Enum.Parse<StoneType>(nameStone, true);
+                spawnStoneList.Add(type);
+            }
+            return spawnStoneList;
+        }
+        return null;
+    }
+
+    public async Task<List<StoneType>> LoadRuleSpawn_x_SpecialType(string typeRule)
+    {
+        var docRef = db.Collection("rules").Document(typeRule);
+        DocumentSnapshot s = await docRef.GetSnapshotAsync();
+        if (s.Exists && s.ContainsField("spawnSpecialType"))
+        {
+            Dictionary<string, object> ruleData = s.ToDictionary();
+            var stoneSpecialList = ruleData["spawnSpecialType"] as List<object>;
+            List<StoneType> spawnStoneList = new List<StoneType>();
+            foreach (object a in stoneSpecialList)
             {
                 string nameStone = a.ToString();
                 StoneType type = Enum.Parse<StoneType>(nameStone, true);

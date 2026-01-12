@@ -7,7 +7,8 @@ using UnityEngine;
 public enum StoneType
 {
     Red, Green, Blue, Purple, Yellow, Ice,
-    BlueMatch4
+    RedMatch4, GreenMatch4, BlueMatch4, PurpleMatch4, YellowMatch4,
+    RedMatchTorL, GreenMatchTorL, BlueMatchTorL, PurpleMatchTorL, YellowMatchTorL, StoneMatch5
 }
 
 public class StoneBehaviour : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
@@ -20,6 +21,7 @@ public class StoneBehaviour : MonoBehaviour, IPointerDownHandler, IPointerUpHand
     public static bool isSwapping = false;
     private Vector2 firstTouchPosition;
     private Vector2 finalTouchPosition;
+    public bool isHorizontalExplosion; // true thì phá hàng 
 
     public void Awake()
     {
@@ -29,7 +31,7 @@ public class StoneBehaviour : MonoBehaviour, IPointerDownHandler, IPointerUpHand
     public IEnumerator FallAndSlide(List<(int row, int col)> movePath)
     {
         stoneManager.countStoneFallOrSlide += 1;
-        float speed = 700f;
+        float speed = 750f;
         RectTransform rectTransform = GetComponent<RectTransform>();
 
         foreach (var pos in movePath)
@@ -80,13 +82,6 @@ public class StoneBehaviour : MonoBehaviour, IPointerDownHandler, IPointerUpHand
         if (stoneManager.boardStone[row, col].stoneType == StoneType.Ice) return false;
         return true;
     }
-
-    //public bool CheckStoneAfterSwap(int row, int col, int newRow, int newCol)
-    //{
-    //    if (stoneManager.CheckMatch3(row, col) || stoneManager.CheckMatch3(newRow, newCol)) return true;
-    //    if (stoneManager.CheckMatch3IfStoneCenter(row, col) || stoneManager.CheckMatch3IfStoneCenter(newRow, newCol)) return true;
-    //    return false;
-    //}
 
     public void SwapStone(float angle)
     {
@@ -143,7 +138,69 @@ public class StoneBehaviour : MonoBehaviour, IPointerDownHandler, IPointerUpHand
 
         yield return new WaitForSeconds(0.1f);
         isSwapping = false;
-        StoneManager.startFind = true;
+
+        if (stoneA.stoneType == StoneType.StoneMatch5 || stoneB.stoneType == StoneType.StoneMatch5)
+        {
+            StoneBehaviour target, bomb;
+
+            if (stoneA.stoneType == StoneType.StoneMatch5)
+            {
+                target = stoneB;
+                bomb = stoneA;
+            }
+            else
+            {
+                target = stoneA;
+                bomb = stoneB;
+            }
+
+            // Xử lý nổ trong trường hợp cả hai là bomb 
+            if (target.stoneType == StoneType.StoneMatch5) stoneManager.ExecuteUltraBomb();
+
+            // Xử lý nổ trong trường hợp swap với viên bình thường 
+            else stoneManager.ExecuteColorBomb(bomb, target.stoneType);
+        }
+        else if (!stoneManager.CheckStoneAfterSwap(stoneA.r, stoneA.c, stoneB.r, stoneB.c)) 
+            StartCoroutine(SmoothRemoveSwap(stoneA, stoneB, stoneA.r, stoneA.c, stoneB.r, stoneB.c));
+        else
+        {
+            StoneManager.startFind = true;
+        }
+    }
+
+    private IEnumerator SmoothRemoveSwap(StoneBehaviour stoneA, StoneBehaviour stoneB, int rA, int cA, int rB, int cB)
+    {
+        isSwapping = true;
+        RectTransform rectA = stoneA.GetComponent<RectTransform>();
+        RectTransform rectB = stoneB.GetComponent<RectTransform>();
+
+        Vector2 startPosA = rectA.anchoredPosition;
+        Vector2 startPosB = rectB.anchoredPosition;
+
+        float duration = 0.2f;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+            float curve = t * t * (3f - 2f * t);
+            rectA.anchoredPosition = Vector2.Lerp(startPosA, startPosB, curve);
+            rectB.anchoredPosition = Vector2.Lerp(startPosB, startPosA, curve);
+            yield return null;
+        }
+
+        rectA.anchoredPosition = startPosB;
+        rectB.anchoredPosition = startPosA;
+
+        stoneA.r = rB; stoneA.c = cB;
+        stoneB.r = rA; stoneB.c = cA;
+
+        stoneManager.boardStone[rB, cB] = stoneA;
+        stoneManager.boardStone[rA, cA] = stoneB;
+
+        yield return new WaitForSeconds(0.1f);
+        isSwapping = false;
     }
 }
 

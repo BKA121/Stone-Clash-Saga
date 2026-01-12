@@ -647,6 +647,17 @@ MonoBehaviour:
   purpleDiamonPrefab: {fileID: 517903067744776049, guid: 2e861cb0c596a7b42b9d66eede6da5de, type: 3}
   yellowDiamonPrefab: {fileID: 6240216954524336388, guid: df879462b5d5b304cbd02573af94148f, type: 3}
   icePrefab: {fileID: 4415405595486440499, guid: 845bd794a5897fb478d4319416cf8c3b, type: 3}
+  stoneMatch5Prefab: {fileID: 8249152972888439863, guid: 8a5bc50fed2003745b4c4850a52a6db7, type: 3}
+  redMatch4Prefab: {fileID: 4636682381600309462, guid: 485d0ea753542394ab6ebf6db30b62fd, type: 3}
+  blueMatch4Prefab: {fileID: 2462687786431288981, guid: fc40136579574b846985d048cbbe638a, type: 3}
+  greenMatch4Prefab: {fileID: 7344610514967105638, guid: 9d2184e0eac31a641a69a8188b465cc2, type: 3}
+  purpleMatch4Prefab: {fileID: 7690826932161734260, guid: 823880b06dd0c474f83425468a91e918, type: 3}
+  yellowMatch4Prefab: {fileID: 1023350122191226275, guid: 140f56f568f9ad74cbd1374b6265e739, type: 3}
+  redMatchTorLPrefab: {fileID: 9147714480248716221, guid: d27925d22f03b054d86d0c24b6c66e55, type: 3}
+  blueMatchTorLPrefab: {fileID: 3127393024140859869, guid: 3c875dac5b829bb46b25c8809d3d43a1, type: 3}
+  greenMatchTorLPrefab: {fileID: 1155706595720305399, guid: 934f2e92fd2e3d843b260dd3ed218b60, type: 3}
+  purpleMatchTorLPrefab: {fileID: 2114242744072697509, guid: 7da3bb6a5341c4a4c86864484dce5b01, type: 3}
+  yellowMatchTorLPrefab: {fileID: 8371284839347531787, guid: 9d3639c03320c504e8bc5cea561db2b4, type: 3}
   firestoreReader: {fileID: 1734428083}
   stonePoolManager: {fileID: 1993070956}
   uiHandler: {fileID: 1035799546}
@@ -657,6 +668,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 3e3d1361d59dc854a8764fd2e59f7eaa, type: 3}
   - {fileID: 21300000, guid: 4336718fa98cf5347aad67342fd80343, type: 3}
   stoneContainer: {fileID: 1593281953}
+  normalType: 
   row: 0
   column: 0
   curMove: 0
@@ -2864,7 +2876,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7d447257ca8a5834fa07cfa0caa516de, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stoneManager: {fileID: 0}
+  stoneManager: {fileID: 671741878}
   stoneContainer: {fileID: 1593281953}
 --- !u!4 &1993070957
 Transform:
